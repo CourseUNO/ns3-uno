@@ -15,6 +15,13 @@ set(AppleClang_MinVersion 13.1.6)
 set(Clang_MinVersion 11.0.0)
 set(GNU_MinVersion 10.1.0)
 
+set(NS3_EXAMPLES ON)
+set(NS3_LOG ON)
+set(NS3_TESTS ON)
+set(NS3_ASSERT ON)
+set(NS3_DES_METRICS ON)
+set(NS3_COLORED_OUTPUT ON)
+
 # common options
 option(NS3_ASSERT "Enable assert on failure" OFF)
 option(NS3_DES_METRICS "Enable DES Metrics event collection" OFF)
