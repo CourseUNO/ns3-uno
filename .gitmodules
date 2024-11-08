@@ -1,0 +1,9 @@
+[submodule "contrib/ns-3-dev"]
+	path = contrib/ns-3-dev
+	url = https://gitlab.com/nsnam/ns-3-dev.git
+[submodule "contrib/ns3-ai"]
+	path = contrib/ns3-ai
+	url = https://github.com/hust-diangroup/ns3-ai.git
+[submodule "contrib/ml-propagation-loss-model"]
+	path = contrib/ml-propagation-loss-model
+	url = https://gitlab.com/inesctec-ns3/ml-propagation-loss-model.git
