@@ -1,0 +1,6 @@
+person.c
+setup.py
+uno_extension.egg-info/PKG-INFO
+uno_extension.egg-info/SOURCES.txt
+uno_extension.egg-info/dependency_links.txt
+uno_extension.egg-info/top_level.txt

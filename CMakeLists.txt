@@ -21,6 +21,7 @@ set(NS3_TESTS ON)
 set(NS3_ASSERT ON)
 set(NS3_DES_METRICS ON)
 set(NS3_COLORED_OUTPUT ON)
+set(NS3_PYTHON_BINDINGS ON)
 
 # common options
 option(NS3_ASSERT "Enable assert on failure" OFF)

@@ -25,3 +25,5 @@ build_lib(
         ${libmobility}
         TEST_SOURCES ""
 )
+
+add_library(uno-lab-python-extension python/person.c)

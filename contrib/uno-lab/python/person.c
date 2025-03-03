@@ -33,7 +33,7 @@ static int Person_init(Person* self, PyObject* args, PyObject* kwds) {
 // Greet method
 static PyObject* Person_greet(Person* self) {
     char buffer[100];
-    snprintf(buffer, sizeof(buffer), "Hello, I am %s and I am %d years old", self->name, self->age);
+    snprintf(buffer, sizeof(buffer), "Hi, I am %s and I am %d years old", self->name, self->age);
     return PyUnicode_FromString(buffer);  // Return a Python string
 }
 
@@ -46,7 +46,7 @@ static PyMethodDef Person_methods[] = {
 // Define the Person type
 static PyTypeObject PersonType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-        .tp_name = "mymodule.Person",       // Fully qualified name
+        .tp_name = "uno_extension.Person",       // Fully qualified name
     .tp_basicsize = sizeof(Person),     // Size of the object
     .tp_itemsize = 0,                   // For variable-sized objects (not used here)
     .tp_dealloc = (destructor)Person_dealloc,  // Deallocator
@@ -58,25 +58,27 @@ static PyTypeObject PersonType = {
 };
 
 // Module definition
-static struct PyModuleDef mymodule_definition = {
+static struct PyModuleDef uno_extension_definition = {
     PyModuleDef_HEAD_INIT,
-    "mymodule",                         // Module name
+    "uno_extension",                         // Module name
     "A module with a Person type",      // Module docstring
     -1,                                 // No per-interpreter state
     NULL                                // No module-level methods
 };
 
 // Module initialization function
-PyMODINIT_FUNC PyInit_mymodule(void) {
+PyMODINIT_FUNC PyInit_uno_extension(void) {
     PyObject* m;
     // Prepare the Person type
-    if (PyType_Ready(&PersonType) < 0)
+    if (PyType_Ready(&PersonType) < 0) {
         return NULL;
+}
 
     // Create the module
-    m = PyModule_Create(&mymodule_definition);
-    if (m == NULL)
+    m = PyModule_Create(&uno_extension_definition);
+    if (m == NULL) {
         return NULL;
+}
 
     // Add the Person type to the module
     Py_INCREF(&PersonType);

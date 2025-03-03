@@ -1,0 +1,3 @@
+./python/*.so
+./python/build
+./python/uno_extension.egg-info
