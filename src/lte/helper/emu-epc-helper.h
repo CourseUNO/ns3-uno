@@ -18,9 +18,9 @@ namespace ns3
 {
 
 /**
- * \ingroup lte
+ * @ingroup lte
  *
- * \brief Create an EPC network using EmuFdNetDevice
+ * @brief Create an EPC network using EmuFdNetDevice
  *
  * This Helper will create an EPC network topology comprising of a
  * single node that implements both the SGW and PGW functionality, and
@@ -44,10 +44,9 @@ class EmuEpcHelper : public NoBackhaulEpcHelper
     // inherited from Object
     /**
      * Register this type.
-     * \return The object TypeId.
+     * @return The object TypeId.
      */
     static TypeId GetTypeId();
-    TypeId GetInstanceTypeId() const override;
     void DoDispose() override;
 
     // inherited from EpcHelper

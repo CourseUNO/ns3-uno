@@ -5,7 +5,7 @@
  *
  */
 
-/**
+/*
  * This is an example on how to configure the channel model classes to simulate
  * a vehicular environment.
  * The channel condition is determined using the model specified in [1], Table 6.2-1.
@@ -38,6 +38,7 @@
 
 using namespace ns3;
 
+/// the log component
 NS_LOG_COMPONENT_DEFINE("ThreeGppV2vChannelExample");
 
 static Ptr<ThreeGppPropagationLossModel>
@@ -46,8 +47,8 @@ static Ptr<ThreeGppSpectrumPropagationLossModel>
     m_spectrumLossModel;                       //!< the SpectrumPropagationLossModel object
 static Ptr<ChannelConditionModel> m_condModel; //!< the ChannelConditionModel object
 
-/*
- * \brief A structure that holds the parameters for the ComputeSnr
+/**
+ * @brief A structure that holds the parameters for the ComputeSnr
  * function. In this way the problem with the limited
  * number of parameters of method Schedule is avoided.
  */
@@ -63,9 +64,9 @@ struct ComputeSnrParams
 
 /**
  * Perform the beamforming using the DFT beamforming method
- * \param thisDevice the device performing the beamforming
- * \param thisAntenna the antenna object associated to thisDevice
- * \param otherDevice the device towards which point the beam
+ * @param thisDevice the device performing the beamforming
+ * @param thisAntenna the antenna object associated to thisDevice
+ * @param otherDevice the device towards which point the beam
  */
 static void
 DoBeamforming(Ptr<NetDevice> thisDevice,
@@ -87,7 +88,7 @@ DoBeamforming(Ptr<NetDevice> thisDevice,
 
 /**
  * Compute the average SNR
- * \param params A structure that holds a bunch of parameters needed by ComputSnr function to
+ * @param params A structure that holds a bunch of parameters needed by ComputSnr function to
  * calculate the average SNR
  */
 static void
@@ -138,7 +139,7 @@ ComputeSnr(const ComputeSnrParams& params)
 /**
  * Generates a GNU-plottable file representing the buildings deployed in the
  * scenario
- * \param filename the name of the output file
+ * @param filename the name of the output file
  */
 void
 PrintGnuplottableBuildingListToFile(std::string filename)
@@ -254,7 +255,7 @@ main(int argc, char* argv[])
         double vRx = vScatt / 2;
         txMob = CreateObject<WaypointMobilityModel>();
         rxMob = CreateObject<WaypointMobilityModel>();
-        Time nextWaypoint = Seconds(0.0);
+        Time nextWaypoint;
         txMob->GetObject<WaypointMobilityModel>()->AddWaypoint(
             Waypoint(nextWaypoint, Vector(maxAxisX / 2 - streetWidth / 2, 1.0, 1.5)));
         nextWaypoint += Seconds((maxAxisY - streetWidth) / 2 / vTx);
@@ -264,7 +265,7 @@ main(int argc, char* argv[])
         nextWaypoint += Seconds((maxAxisX - streetWidth) / 2 / vTx);
         txMob->GetObject<WaypointMobilityModel>()->AddWaypoint(
             Waypoint(nextWaypoint, Vector(0.0, maxAxisY / 2 - streetWidth / 2, 1.5)));
-        nextWaypoint = Seconds(0.0);
+        nextWaypoint = Seconds(0);
         rxMob->GetObject<WaypointMobilityModel>()->AddWaypoint(
             Waypoint(nextWaypoint, Vector(maxAxisX / 2 - streetWidth / 2, 0.0, 1.5)));
         nextWaypoint += Seconds(maxAxisY / vRx);

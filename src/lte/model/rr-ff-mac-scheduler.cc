@@ -12,11 +12,11 @@
 #include "lte-common.h"
 #include "lte-vendor-specific-parameters.h"
 
-#include <ns3/boolean.h>
-#include <ns3/log.h>
-#include <ns3/math.h>
-#include <ns3/pointer.h>
-#include <ns3/simulator.h>
+#include "ns3/boolean.h"
+#include "ns3/log.h"
+#include "ns3/math.h"
+#include "ns3/pointer.h"
+#include "ns3/simulator.h"
 
 #include <cfloat>
 #include <climits>
@@ -27,13 +27,13 @@ namespace ns3
 
 NS_LOG_COMPONENT_DEFINE("RrFfMacScheduler");
 
-/// Type 0 allocation RBG
+/// Type 0 allocation RBG (see table 7.1.6.1-1 of 36.213)
 static const int Type0AllocationRbg[4] = {
     10,  // RBG size 1
     26,  // RBG size 2
     63,  // RBG size 3
     110, // RBG size 4
-};       // see table 7.1.6.1-1 of 36.213
+};
 
 NS_OBJECT_ENSURE_REGISTERED(RrFfMacScheduler);
 
@@ -287,7 +287,7 @@ RrFfMacScheduler::DoSchedDlRlcBufferReq(
     // initialize statistics of the flow in case of new flows
     if (newLc)
     {
-        m_p10CqiRxed[params.m_rnti] = 1; // only codeword 0 at this stage (SISO)
+        m_p10CqiRxed.emplace(params.m_rnti, 1); // only codeword 0 at this stage (SISO)
         // initialized to 1 (i.e., the lowest value for transmitting a signal)
         m_p10CqiTimers[params.m_rnti] = m_cqiTimersThreshold;
     }

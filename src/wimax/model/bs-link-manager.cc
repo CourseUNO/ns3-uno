@@ -66,7 +66,7 @@ BSLinkManager::ProcessRangingRequest(Cid cid, RngReq rngreq)
     NS_ASSERT_MSG(m_bs->GetState() == BaseStationNetDevice::BS_STATE_UL_SUB_FRAME,
                   "Base station: Error while processing ranging request: !BS_STATE_UL_SUB_FRAME");
 
-    Time irIntervalBoundary = Seconds(0);
+    Time irIntervalBoundary;
 
     if (m_bs->GetUplinkScheduler()->GetIsInvIrIntrvlAllocated())
     {
@@ -248,7 +248,8 @@ BSLinkManager::VerifyInvitedRanging(Cid cid, uint8_t uiuc)
             {
                 auto rngrsp = new RngRsp();
                 AbortRanging(ssRecord->GetBasicCid(), rngrsp, ssRecord, true);
-            } // else keep polling
+            }
+            // else keep polling
         }
     }
 }

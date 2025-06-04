@@ -22,11 +22,11 @@
 #include "lte-rlc-um.h"
 #include "lte-rlc.h"
 
-#include <ns3/fatal-error.h>
-#include <ns3/log.h>
-#include <ns3/object-factory.h>
-#include <ns3/object-map.h>
-#include <ns3/simulator.h>
+#include "ns3/fatal-error.h"
+#include "ns3/log.h"
+#include "ns3/object-factory.h"
+#include "ns3/object-map.h"
+#include "ns3/simulator.h"
 
 #include <cmath>
 
@@ -47,7 +47,7 @@ class UeMemberLteUeCmacSapUser : public LteUeCmacSapUser
     /**
      * Constructor
      *
-     * \param rrc the RRC class
+     * @param rrc the RRC class
      */
     UeMemberLteUeCmacSapUser(LteUeRrc* rrc);
 
@@ -81,23 +81,6 @@ UeMemberLteUeCmacSapUser::NotifyRandomAccessFailed()
 {
     m_rrc->DoNotifyRandomAccessFailed();
 }
-
-/// Map each of UE RRC states to its string representation.
-static const std::string g_ueRrcStateName[LteUeRrc::NUM_STATES] = {
-    "IDLE_START",
-    "IDLE_CELL_SEARCH",
-    "IDLE_WAIT_MIB_SIB1",
-    "IDLE_WAIT_MIB",
-    "IDLE_WAIT_SIB1",
-    "IDLE_CAMPED_NORMALLY",
-    "IDLE_WAIT_SIB2",
-    "IDLE_RANDOM_ACCESS",
-    "IDLE_CONNECTING",
-    "CONNECTED_NORMALLY",
-    "CONNECTED_HANDOVER",
-    "CONNECTED_PHY_PROBLEM",
-    "CONNECTED_REESTABLISHING",
-};
 
 /////////////////////////////
 // ue RRC methods
@@ -625,7 +608,7 @@ LteUeRrc::DoDisconnect()
         break;
 
     default: // i.e. IDLE_RANDOM_ACCESS
-        NS_FATAL_ERROR("method unexpected in state " << ToString(m_state));
+        NS_FATAL_ERROR("method unexpected in state " << m_state);
         break;
     }
 }
@@ -649,7 +632,7 @@ LteUeRrc::DoSetTemporaryCellRnti(uint16_t rnti)
 void
 LteUeRrc::DoNotifyRandomAccessSuccessful()
 {
-    NS_LOG_FUNCTION(this << m_imsi << ToString(m_state));
+    NS_LOG_FUNCTION(this << m_imsi << m_state);
     m_randomAccessSuccessfulTrace(m_imsi, m_cellId, m_rnti);
 
     switch (m_state)
@@ -685,7 +668,7 @@ LteUeRrc::DoNotifyRandomAccessSuccessful()
     break;
 
     default:
-        NS_FATAL_ERROR("unexpected event in state " << ToString(m_state));
+        NS_FATAL_ERROR("unexpected event in state " << m_state);
         break;
     }
 }
@@ -693,7 +676,7 @@ LteUeRrc::DoNotifyRandomAccessSuccessful()
 void
 LteUeRrc::DoNotifyRandomAccessFailed()
 {
-    NS_LOG_FUNCTION(this << m_imsi << ToString(m_state));
+    NS_LOG_FUNCTION(this << m_imsi << m_state);
     m_randomAccessErrorTrace(m_imsi, m_cellId, m_rnti);
 
     switch (m_state)
@@ -707,7 +690,7 @@ LteUeRrc::DoNotifyRandomAccessFailed()
     case CONNECTED_HANDOVER: {
         m_handoverEndErrorTrace(m_imsi, m_cellId, m_rnti);
         /**
-         * \todo After a handover failure because of a random access failure,
+         * @todo After a handover failure because of a random access failure,
          *       send an RRC Connection Re-establishment and switch to
          *       CONNECTED_REESTABLISHING state.
          */
@@ -725,7 +708,7 @@ LteUeRrc::DoNotifyRandomAccessFailed()
     break;
 
     default:
-        NS_FATAL_ERROR("unexpected event in state " << ToString(m_state));
+        NS_FATAL_ERROR("unexpected event in state " << m_state);
         break;
     }
 }
@@ -741,8 +724,7 @@ void
 LteUeRrc::DoStartCellSelection(uint32_t dlEarfcn)
 {
     NS_LOG_FUNCTION(this << m_imsi << dlEarfcn);
-    NS_ASSERT_MSG(m_state == IDLE_START,
-                  "cannot start cell selection from state " << ToString(m_state));
+    NS_ASSERT_MSG(m_state == IDLE_START, "cannot start cell selection from state " << m_state);
     m_dlEarfcn = dlEarfcn;
     m_cphySapProvider.at(0)->StartCellSearch(dlEarfcn);
     SwitchToState(IDLE_CELL_SEARCH);
@@ -765,7 +747,7 @@ LteUeRrc::DoForceCampedOnEnb(uint16_t cellId, uint32_t dlEarfcn)
     case IDLE_CELL_SEARCH:
     case IDLE_WAIT_MIB_SIB1:
     case IDLE_WAIT_SIB1:
-        NS_FATAL_ERROR("cannot abort cell selection " << ToString(m_state));
+        NS_FATAL_ERROR("cannot abort cell selection " << m_state);
         break;
 
     case IDLE_WAIT_MIB:
@@ -787,7 +769,7 @@ LteUeRrc::DoForceCampedOnEnb(uint16_t cellId, uint32_t dlEarfcn)
         break;
 
     default:
-        NS_FATAL_ERROR("unexpected event in state " << ToString(m_state));
+        NS_FATAL_ERROR("unexpected event in state " << m_state);
         break;
     }
 }
@@ -825,7 +807,7 @@ LteUeRrc::DoConnect()
         break;
 
     default:
-        NS_FATAL_ERROR("unexpected event in state " << ToString(m_state));
+        NS_FATAL_ERROR("unexpected event in state " << m_state);
         break;
     }
 }
@@ -938,8 +920,7 @@ LteUeRrc::DoReportUeMeasurements(LteUeCphySapUser::UeMeasurementsParameters para
             }
         }
     }
-
-} // end of LteUeRrc::DoReportUeMeasurements
+}
 
 // RRC SAP methods
 
@@ -1032,7 +1013,7 @@ LteUeRrc::DoRecvRrcConnectionSetup(LteRrcSap::RrcConnectionSetup msg)
     break;
 
     default:
-        NS_FATAL_ERROR("method unexpected in state " << ToString(m_state));
+        NS_FATAL_ERROR("method unexpected in state " << m_state);
         break;
     }
 }
@@ -1136,7 +1117,7 @@ LteUeRrc::DoRecvRrcConnectionReconfiguration(LteRrcSap::RrcConnectionReconfigura
         break;
 
     default:
-        NS_FATAL_ERROR("method unexpected in state " << ToString(m_state));
+        NS_FATAL_ERROR("method unexpected in state " << m_state);
         break;
     }
 }
@@ -1149,7 +1130,7 @@ LteUeRrc::DoRecvRrcConnectionReestablishment(LteRrcSap::RrcConnectionReestablish
     {
     case CONNECTED_REESTABLISHING: {
         /**
-         * \todo After receiving RRC Connection Re-establishment, stop timer
+         * @todo After receiving RRC Connection Re-establishment, stop timer
          *       T301, fire a new trace source, reply with RRC Connection
          *       Re-establishment Complete, and finally switch to
          *       CONNECTED_NORMALLY state. See Section 5.3.7.5 of 3GPP TS
@@ -1159,7 +1140,7 @@ LteUeRrc::DoRecvRrcConnectionReestablishment(LteRrcSap::RrcConnectionReestablish
     break;
 
     default:
-        NS_FATAL_ERROR("method unexpected in state " << ToString(m_state));
+        NS_FATAL_ERROR("method unexpected in state " << m_state);
         break;
     }
 }
@@ -1173,7 +1154,7 @@ LteUeRrc::DoRecvRrcConnectionReestablishmentReject(
     {
     case CONNECTED_REESTABLISHING: {
         /**
-         * \todo After receiving RRC Connection Re-establishment Reject, stop
+         * @todo After receiving RRC Connection Re-establishment Reject, stop
          *       timer T301. See Section 5.3.7.8 of 3GPP TS 36.331.
          */
         m_asSapUser->NotifyConnectionReleased(); // Inform upper layers
@@ -1181,7 +1162,7 @@ LteUeRrc::DoRecvRrcConnectionReestablishmentReject(
     break;
 
     default:
-        NS_FATAL_ERROR("method unexpected in state " << ToString(m_state));
+        NS_FATAL_ERROR("method unexpected in state " << m_state);
         break;
     }
 }
@@ -1190,7 +1171,7 @@ void
 LteUeRrc::DoRecvRrcConnectionRelease(LteRrcSap::RrcConnectionRelease msg)
 {
     NS_LOG_FUNCTION(this << " RNTI " << m_rnti);
-    /// \todo Currently not implemented, see Section 5.3.8 of 3GPP TS 36.331.
+    /// @todo Currently not implemented, see Section 5.3.8 of 3GPP TS 36.331.
 
     m_lastRrcTransactionIdentifier = msg.rrcTransactionIdentifier;
     // release resources at UE
@@ -1262,8 +1243,7 @@ LteUeRrc::SynchronizeToStrongestCell()
         m_cphySapProvider.at(0)->SynchronizeWithEnb(maxRsrpCellId, m_dlEarfcn);
         SwitchToState(IDLE_WAIT_MIB_SIB1);
     }
-
-} // end of void LteUeRrc::SynchronizeToStrongestCell ()
+}
 
 void
 LteUeRrc::EvaluateCellForSelection()
@@ -1318,7 +1298,7 @@ LteUeRrc::EvaluateCellForSelection()
         // and start random access.
         if (!m_connectionPending)
         {
-            NS_LOG_DEBUG("Calling DoConnect in state = " << ToString(m_state));
+            NS_LOG_DEBUG("Calling DoConnect in state = " << m_state);
             DoConnect();
         }
         SwitchToState(IDLE_CAMPED_NORMALLY);
@@ -1343,8 +1323,7 @@ LteUeRrc::EvaluateCellForSelection()
         SwitchToState(IDLE_CELL_SEARCH);
         SynchronizeToStrongestCell(); // retry to a different cell
     }
-
-} // end of void LteUeRrc::EvaluateCellForSelection ()
+}
 
 void
 LteUeRrc::ApplyRadioResourceConfigDedicatedSecondaryCarrier(
@@ -1428,7 +1407,7 @@ LteUeRrc::ApplyRadioResourceConfigDedicated(LteRrcSap::RadioResourceConfigDedica
         {
             // SRB1 not setup yet
             NS_ASSERT_MSG((m_state == IDLE_CONNECTING) || (m_state == CONNECTED_HANDOVER),
-                          "unexpected state " << ToString(m_state));
+                          "unexpected state " << m_state);
             NS_ASSERT_MSG(stamIt->srbIdentity == 1, "only SRB1 supported");
 
             const uint8_t lcid = 1; // fixed LCID for SRB1
@@ -1593,7 +1572,7 @@ LteUeRrc::ApplyRadioResourceConfigDedicated(LteRrcSap::RadioResourceConfigDedica
         {
             NS_LOG_INFO("request to modify existing DRBID");
             Ptr<LteDataRadioBearerInfo> drbInfo = drbMapIt->second;
-            /// \todo currently not implemented. Would need to modify drbInfo, and then propagate
+            /// @todo currently not implemented. Would need to modify drbInfo, and then propagate
             /// changes to the MAC
         }
     }
@@ -1888,12 +1867,11 @@ LteUeRrc::SaveUeMeasurements(uint16_t cellId,
         storedMeasIt = ret.first;
     }
 
-    NS_LOG_DEBUG(this << " IMSI " << m_imsi << " state " << ToString(m_state) << ", measured cell "
-                      << cellId << ", carrier component Id " << componentCarrierId << ", new RSRP "
-                      << rsrp << " stored " << storedMeasIt->second.rsrp << ", new RSRQ " << rsrq
+    NS_LOG_DEBUG(this << " IMSI " << m_imsi << " state " << m_state << ", measured cell " << cellId
+                      << ", carrier component Id " << componentCarrierId << ", new RSRP " << rsrp
+                      << " stored " << storedMeasIt->second.rsrp << ", new RSRQ " << rsrq
                       << " stored " << storedMeasIt->second.rsrq);
-
-} // end of void SaveUeMeasurements
+}
 
 void
 LteUeRrc::MeasurementReportTriggering(uint8_t measId)
@@ -2032,8 +2010,7 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
         NS_LOG_LOGIC(this << " event A1: serving cell " << servingCellId << " ms=" << ms
                           << " thresh=" << thresh << " entryCond=" << entryCond
                           << " leavingCond=" << leavingCond);
-
-    } // end of case LteRrcSap::ReportConfigEutra::EVENT_A1
+    }
 
     break;
 
@@ -2118,8 +2095,7 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
         NS_LOG_LOGIC(this << " event A2: serving cell " << servingCellId << " ms=" << ms
                           << " thresh=" << thresh << " entryCond=" << entryCond
                           << " leavingCond=" << leavingCond);
-
-    } // end of case LteRrcSap::ReportConfigEutra::EVENT_A2
+    }
 
     break;
 
@@ -2229,10 +2205,8 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
             NS_LOG_LOGIC(this << " event A3: neighbor cell " << cellId << " mn=" << mn
                               << " mp=" << mp << " offset=" << off << " entryCond=" << entryCond
                               << " leavingCond=" << leavingCond);
-
-        } // end of for (storedMeasIt)
-
-    } // end of case LteRrcSap::ReportConfigEutra::EVENT_A3
+        }
+    }
 
     break;
 
@@ -2330,10 +2304,8 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
             NS_LOG_LOGIC(this << " event A4: neighbor cell " << cellId << " mn=" << mn
                               << " thresh=" << thresh << " entryCond=" << entryCond
                               << " leavingCond=" << leavingCond);
-
-        } // end of for (storedMeasIt)
-
-    } // end of case LteRrcSap::ReportConfigEutra::EVENT_A4
+        }
+    }
 
     break;
 
@@ -2432,10 +2404,8 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
                 NS_LOG_LOGIC(this << " event A5: neighbor cell " << cellId << " mn=" << mn
                                   << " mp=" << mp << " thresh2=" << thresh2
                                   << " thresh1=" << thresh1 << " entryCond=" << entryCond);
-
-            } // end of for (storedMeasIt)
-
-        } // end of if (entryCond)
+            }
+        }
         else
         {
             NS_LOG_LOGIC(this << " event A5: serving cell " << m_cellId << " mp=" << mp
@@ -2475,7 +2445,7 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
                             eventLeavingCondApplicable = true;
                         }
                     }
-                } // end of if (reportConfigEutra.timeToTrigger == 0)
+                }
                 else
                 {
                     // leaving condition #2 has to be checked to cancel time-to-trigger
@@ -2527,18 +2497,13 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
                                               << " mn=" << mn << " mp=" << mp
                                               << " thresh2=" << thresh2 << " thresh1=" << thresh1
                                               << " leavingCond=" << leavingCond);
-
-                        } // end of if (measReportIt->second.cellsTriggeredList.find (cellId)
-                          //            != measReportIt->second.cellsTriggeredList.end ())
-
-                    } // end of for (storedMeasIt)
-
-                } // end of else of if (reportConfigEutra.timeToTrigger == 0)
+                        }
+                    }
+                }
 
                 NS_LOG_LOGIC(this << " event A5: serving cell " << m_cellId << " mp=" << mp
                                   << " thresh1=" << thresh1 << " leavingCond=" << leavingCond);
-
-            } // end of if (leavingCond)
+            }
             else
             {
                 if (reportConfigEutra.timeToTrigger > 0)
@@ -2586,25 +2551,18 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
                         NS_LOG_LOGIC(this << " event A5: neighbor cell " << cellId << " mn=" << mn
                                           << " mp=" << mp << " thresh2=" << thresh2 << " thresh1="
                                           << thresh1 << " leavingCond=" << leavingCond);
-
-                    } // end of if (measReportIt->second.cellsTriggeredList.find (cellId)
-                      //            != measReportIt->second.cellsTriggeredList.end ())
-
-                } // end of for (storedMeasIt)
-
-            } // end of else of if (leavingCond)
-
-        } // end of if (isMeasIdInReportList)
-
-    } // end of case LteRrcSap::ReportConfigEutra::EVENT_A5
+                    }
+                }
+            }
+        }
+    }
 
     break;
 
     default:
         NS_FATAL_ERROR("unsupported eventId " << reportConfigEutra.eventId);
         break;
-
-    } // switch (event type)
+    }
 
     NS_LOG_LOGIC(this << " eventEntryCondApplicable=" << eventEntryCondApplicable
                       << " eventLeavingCondApplicable=" << eventLeavingCondApplicable);
@@ -2658,8 +2616,7 @@ LteUeRrc::MeasurementReportTriggering(uint8_t measId)
             leavingTriggerIt->second.push_back(t);
         }
     }
-
-} // end of void LteUeRrc::MeasurementReportTriggering (uint8_t measId)
+}
 
 void
 LteUeRrc::CancelEnteringTrigger(uint8_t measId)
@@ -2696,13 +2653,7 @@ LteUeRrc::CancelEnteringTrigger(uint8_t measId, uint16_t cellId)
     {
         NS_ASSERT(it2->measId == measId);
 
-        for (auto it3 = it2->concernedCells.begin(); it3 != it2->concernedCells.end(); ++it3)
-        {
-            if (*it3 == cellId)
-            {
-                it3 = it2->concernedCells.erase(it3);
-            }
-        }
+        it2->concernedCells.remove_if([cellId](auto cell) { return cellId == cell; });
 
         if (it2->concernedCells.empty())
         {
@@ -2753,13 +2704,7 @@ LteUeRrc::CancelLeavingTrigger(uint8_t measId, uint16_t cellId)
     {
         NS_ASSERT(it2->measId == measId);
 
-        for (auto it3 = it2->concernedCells.begin(); it3 != it2->concernedCells.end(); ++it3)
-        {
-            if (*it3 == cellId)
-            {
-                it3 = it2->concernedCells.erase(it3);
-            }
-        }
+        it2->concernedCells.remove_if([cellId](auto cell) { return cellId == cell; });
 
         if (it2->concernedCells.empty())
         {
@@ -2837,10 +2782,8 @@ LteUeRrc::VarMeasReportListAdd(uint8_t measId, ConcernedCells_t enteringCells)
                 CancelEnteringTrigger(measId, *it);
             }
         }
-
-    } // end of if (!enteringTriggerIt->second.empty ())
-
-} // end of LteUeRrc::VarMeasReportListAdd
+    }
+}
 
 void
 LteUeRrc::VarMeasReportListErase(uint8_t measId, ConcernedCells_t leavingCells, bool reportOnLeave)
@@ -2892,10 +2835,8 @@ LteUeRrc::VarMeasReportListErase(uint8_t measId, ConcernedCells_t leavingCells, 
                 CancelLeavingTrigger(measId, *it);
             }
         }
-
-    } // end of if (!leavingTriggerIt->second.empty ())
-
-} // end of LteUeRrc::VarMeasReportListErase
+    }
+}
 
 void
 LteUeRrc::VarMeasReportListClear(uint8_t measId)
@@ -3214,11 +3155,11 @@ LteUeRrc::Bid2Drbid(uint8_t bid)
 void
 LteUeRrc::SwitchToState(State newState)
 {
-    NS_LOG_FUNCTION(this << ToString(newState));
+    NS_LOG_FUNCTION(this << newState);
     State oldState = m_state;
     m_state = newState;
-    NS_LOG_INFO(this << " IMSI " << m_imsi << " RNTI " << m_rnti << " UeRrc " << ToString(oldState)
-                     << " --> " << ToString(newState));
+    NS_LOG_INFO(this << " IMSI " << m_imsi << " RNTI " << m_rnti << " UeRrc " << oldState << " --> "
+                     << newState);
     m_stateTransitionTrace(m_imsi, m_cellId, m_rnti, oldState, newState);
 
     switch (newState)
@@ -3332,7 +3273,46 @@ LteUeRrc::ResetRlfParams()
 const std::string
 LteUeRrc::ToString(LteUeRrc::State s)
 {
-    return g_ueRrcStateName[s];
+    std::ostringstream ss;
+    ss << s;
+    return ss.str();
+}
+
+std::ostream&
+operator<<(std::ostream& os, LteUeRrc::State state)
+{
+    switch (state)
+    {
+    case LteUeRrc::State::IDLE_START:
+        return os << "IDLE_START";
+    case LteUeRrc::State::IDLE_CELL_SEARCH:
+        return os << "IDLE_CELL_SEARCH";
+    case LteUeRrc::State::IDLE_WAIT_MIB_SIB1:
+        return os << "IDLE_WAIT_MIB_SIB1";
+    case LteUeRrc::State::IDLE_WAIT_MIB:
+        return os << "IDLE_WAIT_MIB";
+    case LteUeRrc::State::IDLE_WAIT_SIB1:
+        return os << "IDLE_WAIT_SIB1";
+    case LteUeRrc::State::IDLE_CAMPED_NORMALLY:
+        return os << "IDLE_CAMPED_NORMALLY";
+    case LteUeRrc::State::IDLE_WAIT_SIB2:
+        return os << "IDLE_WAIT_SIB2";
+    case LteUeRrc::State::IDLE_RANDOM_ACCESS:
+        return os << "IDLE_RANDOM_ACCESS";
+    case LteUeRrc::State::IDLE_CONNECTING:
+        return os << "IDLE_CONNECTING";
+    case LteUeRrc::State::CONNECTED_NORMALLY:
+        return os << "CONNECTED_NORMALLY";
+    case LteUeRrc::State::CONNECTED_HANDOVER:
+        return os << "CONNECTED_HANDOVER";
+    case LteUeRrc::State::CONNECTED_PHY_PROBLEM:
+        return os << "CONNECTED_PHY_PROBLEM";
+    case LteUeRrc::State::CONNECTED_REESTABLISHING:
+        return os << "CONNECTED_REESTABLISHING";
+    case LteUeRrc::State::NUM_STATES:
+        return os << "NUM_STATES";
+    };
+    return os << "UNKNOWN(" << static_cast<uint32_t>(state) << ")";
 }
 
 } // namespace ns3

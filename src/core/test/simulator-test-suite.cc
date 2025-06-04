@@ -16,33 +16,33 @@
 using namespace ns3;
 
 /**
- * \file
- * \ingroup simulator-tests
+ * @file
+ * @ingroup simulator-tests
  * Simulator class test suite
  */
 
 /**
- * \ingroup core-tests
- * \defgroup simulator-tests Simulator class tests
+ * @ingroup core-tests
+ * @defgroup simulator-tests Simulator class tests
  */
 
 /**
- * \ingroup simulator-tests
+ * @ingroup simulator-tests
  *
- * \brief Check that basic event handling is working with different Simulator implementations.
+ * @brief Check that basic event handling is working with different Simulator implementations.
  */
 class SimulatorEventsTestCase : public TestCase
 {
   public:
     /**
      * Constructor.
-     * \param schedulerFactory Scheduler factory.
+     * @param schedulerFactory Scheduler factory.
      */
     SimulatorEventsTestCase(ObjectFactory schedulerFactory);
     void DoRun() override;
     /**
      * Test Event.
-     * \param value Event parameter.
+     * @param value Event parameter.
      * @{
      */
     void EventA(int value);
@@ -58,7 +58,7 @@ class SimulatorEventsTestCase : public TestCase
 
     /**
      * Get the simulator time.
-     * \return The actual time [ms].
+     * @return The actual time [ms].
      */
     uint64_t NowUs();
     /**
@@ -201,9 +201,9 @@ SimulatorEventsTestCase::DoRun()
 }
 
 /**
- * \ingroup simulator-tests
+ * @ingroup simulator-tests
  *
- * \brief Check that all templates are instantiated correctly.
+ * @brief Check that all templates are instantiated correctly.
  *
  * This is a compilation test, it cannot fail at runtime.
  */
@@ -211,13 +211,20 @@ class SimulatorTemplateTestCase : public TestCase
 {
   public:
     SimulatorTemplateTestCase();
+
     /**
      * Ref and Unref - only here for testing of Ptr<>
      *
      * @{
      */
-    void Ref() const {};
-    void Unref() const {};
+    void Ref() const
+    {
+    }
+
+    void Unref() const
+    {
+    }
+
     /** @} */
 
   private:
@@ -228,39 +235,45 @@ class SimulatorTemplateTestCase : public TestCase
      *
      * @{
      */
-    void bar0(){};
-    void bar1(int){};
-    void bar2(int, int){};
-    void bar3(int, int, int){};
-    void bar4(int, int, int, int){};
-    void bar5(int, int, int, int, int){};
-    void baz1(int&){};
-    void baz2(int&, int&){};
-    void baz3(int&, int&, int&){};
-    void baz4(int&, int&, int&, int&){};
-    void baz5(int&, int&, int&, int&, int&){};
-    void cbaz1(const int&){};
-    void cbaz2(const int&, const int&){};
-    void cbaz3(const int&, const int&, const int&){};
-    void cbaz4(const int&, const int&, const int&, const int&){};
-    void cbaz5(const int&, const int&, const int&, const int&, const int&){};
 
-    void bar0c() const {};
-    void bar1c(int) const {};
-    void bar2c(int, int) const {};
-    void bar3c(int, int, int) const {};
-    void bar4c(int, int, int, int) const {};
-    void bar5c(int, int, int, int, int) const {};
-    void baz1c(int&) const {};
-    void baz2c(int&, int&) const {};
-    void baz3c(int&, int&, int&) const {};
-    void baz4c(int&, int&, int&, int&) const {};
-    void baz5c(int&, int&, int&, int&, int&) const {};
-    void cbaz1c(const int&) const {};
-    void cbaz2c(const int&, const int&) const {};
-    void cbaz3c(const int&, const int&, const int&) const {};
-    void cbaz4c(const int&, const int&, const int&, const int&) const {};
-    void cbaz5c(const int&, const int&, const int&, const int&, const int&) const {};
+    // clang-format off
+
+    void bar0() {}
+    void bar1(int) {}
+    void bar2(int, int) {}
+    void bar3(int, int, int) {}
+    void bar4(int, int, int, int) {}
+    void bar5(int, int, int, int, int) {}
+    void baz1(int&) {}
+    void baz2(int&, int&) {}
+    void baz3(int&, int&, int&) {}
+    void baz4(int&, int&, int&, int&) {}
+    void baz5(int&, int&, int&, int&, int&) {}
+    void cbaz1(const int&) {}
+    void cbaz2(const int&, const int&) {}
+    void cbaz3(const int&, const int&, const int&) {}
+    void cbaz4(const int&, const int&, const int&, const int&) {}
+    void cbaz5(const int&, const int&, const int&, const int&, const int&) {}
+
+    void bar0c() const {}
+    void bar1c(int) const {}
+    void bar2c(int, int) const {}
+    void bar3c(int, int, int) const {}
+    void bar4c(int, int, int, int) const {}
+    void bar5c(int, int, int, int, int) const {}
+    void baz1c(int&) const {}
+    void baz2c(int&, int&) const {}
+    void baz3c(int&, int&, int&) const {}
+    void baz4c(int&, int&, int&, int&) const {}
+    void baz5c(int&, int&, int&, int&, int&) const {}
+    void cbaz1c(const int&) const {}
+    void cbaz2c(const int&, const int&) const {}
+    void cbaz3c(const int&, const int&, const int&) const {}
+    void cbaz4c(const int&, const int&, const int&, const int&) const {}
+    void cbaz5c(const int&, const int&, const int&, const int&, const int&) const {}
+
+    // clang-format on
+
     /** @} */
 };
 
@@ -269,85 +282,27 @@ class SimulatorTemplateTestCase : public TestCase
  *
  * @{
  */
-static void
-foo0()
-{
-}
 
-static void
-foo1(int)
-{
-}
+// clang-format off
 
-static void
-foo2(int, int)
-{
-}
+static void foo0() {}
+static void foo1(int) {}
+static void foo2(int, int) {}
+static void foo3(int, int, int) {}
+static void foo4(int, int, int, int) {}
+static void foo5(int, int, int, int, int) {}
+static void ber1(int&) {}
+static void ber2(int&, int&) {}
+static void ber3(int&, int&, int&) {}
+static void ber4(int&, int&, int&, int&) {}
+static void ber5(int&, int&, int&, int&, int&) {}
+static void cber1(const int&) {}
+static void cber2(const int&, const int&) {}
+static void cber3(const int&, const int&, const int&) {}
+static void cber4(const int&, const int&, const int&, const int&) {}
+static void cber5(const int&, const int&, const int&, const int&, const int&) {}
 
-static void
-foo3(int, int, int)
-{
-}
-
-static void
-foo4(int, int, int, int)
-{
-}
-
-static void
-foo5(int, int, int, int, int)
-{
-}
-
-static void
-ber1(int&)
-{
-}
-
-static void
-ber2(int&, int&)
-{
-}
-
-static void
-ber3(int&, int&, int&)
-{
-}
-
-static void
-ber4(int&, int&, int&, int&)
-{
-}
-
-static void
-ber5(int&, int&, int&, int&, int&)
-{
-}
-
-static void
-cber1(const int&)
-{
-}
-
-static void
-cber2(const int&, const int&)
-{
-}
-
-static void
-cber3(const int&, const int&, const int&)
-{
-}
-
-static void
-cber4(const int&, const int&, const int&, const int&)
-{
-}
-
-static void
-cber5(const int&, const int&, const int&, const int&, const int&)
-{
-}
+// clang-format on
 
 /** @} */
 
@@ -361,17 +316,17 @@ void
 SimulatorTemplateTestCase::DoRun()
 {
     // Test schedule of const methods
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar0c, this);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar1c, this, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar2c, this, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar3c, this, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar4c, this, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar5c, this, 0, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz1c, this, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz2c, this, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz3c, this, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz4c, this, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz5c, this, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar0c, this);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar1c, this, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar2c, this, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar3c, this, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar4c, this, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar5c, this, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz1c, this, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz2c, this, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz3c, this, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz4c, this, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz5c, this, 0, 0, 0, 0, 0);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::bar0c, this);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::bar1c, this, 0);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::bar2c, this, 0, 0);
@@ -394,11 +349,11 @@ SimulatorTemplateTestCase::DoRun()
     Simulator::ScheduleDestroy(&SimulatorTemplateTestCase::cbaz3c, this, 0, 0, 0);
     Simulator::ScheduleDestroy(&SimulatorTemplateTestCase::cbaz4c, this, 0, 0, 0, 0);
     Simulator::ScheduleDestroy(&SimulatorTemplateTestCase::cbaz5c, this, 0, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz1c, this, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz2c, this, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz3c, this, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz4c, this, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz5c, this, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz1c, this, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz2c, this, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz3c, this, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz4c, this, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz5c, this, 0, 0, 0, 0, 0);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::baz1c, this, 0);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::baz2c, this, 0, 0);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::baz3c, this, 0, 0, 0);
@@ -411,32 +366,32 @@ SimulatorTemplateTestCase::DoRun()
     Simulator::ScheduleDestroy(&SimulatorTemplateTestCase::baz5c, this, 0, 0, 0, 0, 0);
 
     // Test of schedule const methods with Ptr<> pointers
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar0c,
                         Ptr<const SimulatorTemplateTestCase>(this));
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar1c,
                         Ptr<const SimulatorTemplateTestCase>(this),
                         0);
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar2c,
                         Ptr<const SimulatorTemplateTestCase>(this),
                         0,
                         0);
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar3c,
                         Ptr<const SimulatorTemplateTestCase>(this),
                         0,
                         0,
                         0);
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar4c,
                         Ptr<const SimulatorTemplateTestCase>(this),
                         0,
                         0,
                         0,
                         0);
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar5c,
                         Ptr<const SimulatorTemplateTestCase>(this),
                         0,
@@ -500,17 +455,17 @@ SimulatorTemplateTestCase::DoRun()
                                0);
 
     // Test schedule of raw functions
-    Simulator::Schedule(Seconds(0.0), &foo0);
-    Simulator::Schedule(Seconds(0.0), &foo1, 0);
-    Simulator::Schedule(Seconds(0.0), &foo2, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &foo3, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &foo4, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &foo5, 0, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &cber1, 0);
-    Simulator::Schedule(Seconds(0.0), &cber2, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &cber3, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &cber4, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &cber5, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &foo0);
+    Simulator::Schedule(Seconds(0), &foo1, 0);
+    Simulator::Schedule(Seconds(0), &foo2, 0, 0);
+    Simulator::Schedule(Seconds(0), &foo3, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &foo4, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &foo5, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &cber1, 0);
+    Simulator::Schedule(Seconds(0), &cber2, 0, 0);
+    Simulator::Schedule(Seconds(0), &cber3, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &cber4, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &cber5, 0, 0, 0, 0, 0);
     Simulator::ScheduleNow(&foo0);
     Simulator::ScheduleNow(&foo1, 0);
     Simulator::ScheduleNow(&foo2, 0, 0);
@@ -535,17 +490,17 @@ SimulatorTemplateTestCase::DoRun()
     Simulator::ScheduleDestroy(&cber5, 0, 0, 0, 0, 0);
 
     // Test schedule of normal member methods
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar0, this);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar1, this, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar2, this, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar3, this, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar4, this, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::bar5, this, 0, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz1, this, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz2, this, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz3, this, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz4, this, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::cbaz5, this, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar0, this);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar1, this, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar2, this, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar3, this, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar4, this, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::bar5, this, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz1, this, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz2, this, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz3, this, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz4, this, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::cbaz5, this, 0, 0, 0, 0, 0);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::bar0, this);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::bar1, this, 0);
     Simulator::ScheduleNow(&SimulatorTemplateTestCase::bar2, this, 0, 0);
@@ -570,32 +525,32 @@ SimulatorTemplateTestCase::DoRun()
     Simulator::ScheduleDestroy(&SimulatorTemplateTestCase::cbaz5, this, 0, 0, 0, 0, 0);
 
     // test schedule of normal methods with Ptr<> pointers
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar0,
                         Ptr<SimulatorTemplateTestCase>(this));
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar1,
                         Ptr<SimulatorTemplateTestCase>(this),
                         0);
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar2,
                         Ptr<SimulatorTemplateTestCase>(this),
                         0,
                         0);
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar3,
                         Ptr<SimulatorTemplateTestCase>(this),
                         0,
                         0,
                         0);
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar4,
                         Ptr<SimulatorTemplateTestCase>(this),
                         0,
                         0,
                         0,
                         0);
-    Simulator::Schedule(Seconds(0.0),
+    Simulator::Schedule(Seconds(0),
                         &SimulatorTemplateTestCase::bar5,
                         Ptr<SimulatorTemplateTestCase>(this),
                         0,
@@ -661,16 +616,16 @@ SimulatorTemplateTestCase::DoRun()
     // Simulator::Schedule (Seconds (0.0), &cber1, 0.0);
 
     // This code appears to be duplicate test code.
-    Simulator::Schedule(Seconds(0.0), &ber1, 0);
-    Simulator::Schedule(Seconds(0.0), &ber2, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &ber3, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &ber4, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &ber5, 0, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz1, this, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz2, this, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz3, this, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz4, this, 0, 0, 0, 0);
-    Simulator::Schedule(Seconds(0.0), &SimulatorTemplateTestCase::baz5, this, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &ber1, 0);
+    Simulator::Schedule(Seconds(0), &ber2, 0, 0);
+    Simulator::Schedule(Seconds(0), &ber3, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &ber4, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &ber5, 0, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz1, this, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz2, this, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz3, this, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz4, this, 0, 0, 0, 0);
+    Simulator::Schedule(Seconds(0), &SimulatorTemplateTestCase::baz5, this, 0, 0, 0, 0, 0);
     Simulator::ScheduleNow(&ber1, 0);
     Simulator::ScheduleNow(&ber2, 0, 0);
     Simulator::ScheduleNow(&ber3, 0, 0, 0);
@@ -697,9 +652,9 @@ SimulatorTemplateTestCase::DoRun()
 }
 
 /**
- * \ingroup simulator-tests
+ * @ingroup simulator-tests
  *
- * \brief The simulator Test Suite.
+ * @brief The simulator Test Suite.
  */
 class SimulatorTestSuite : public TestSuite
 {

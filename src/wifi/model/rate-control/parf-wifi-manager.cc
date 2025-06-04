@@ -145,7 +145,7 @@ ParfWifiManager::CheckInit(ParfWifiRemoteStation* station)
         WifiMode mode = GetSupported(station, station->m_rateIndex);
         auto channelWidth = GetChannelWidth(station);
         DataRate rate(mode.GetDataRate(channelWidth));
-        const auto power = GetPhy()->GetPowerDbm(m_maxPower);
+        const auto power = GetPhy()->GetPower(m_maxPower);
         m_powerChange(power, power, station->m_state->m_address);
         m_rateChange(rate, rate, station->m_state->m_address);
         station->m_initialized = true;
@@ -314,16 +314,16 @@ ParfWifiManager::DoGetDataTxVector(WifiRemoteStation* st, MHz_u allowedWidth)
     NS_LOG_FUNCTION(this << st << allowedWidth);
     auto station = static_cast<ParfWifiRemoteStation*>(st);
     auto channelWidth = GetChannelWidth(station);
-    if (channelWidth > 20 && channelWidth != 22)
+    if (channelWidth > MHz_u{20} && channelWidth != MHz_u{22})
     {
-        channelWidth = 20;
+        channelWidth = MHz_u{20};
     }
     CheckInit(station);
     WifiMode mode = GetSupported(station, station->m_rateIndex);
     DataRate rate(mode.GetDataRate(channelWidth));
     DataRate prevRate(GetSupported(station, station->m_prevRateIndex).GetDataRate(channelWidth));
-    const auto power = GetPhy()->GetPowerDbm(station->m_powerLevel);
-    const auto prevPower = GetPhy()->GetPowerDbm(station->m_prevPowerLevel);
+    const auto power = GetPhy()->GetPower(station->m_powerLevel);
+    const auto prevPower = GetPhy()->GetPower(station->m_prevPowerLevel);
     if (station->m_prevPowerLevel != station->m_powerLevel)
     {
         m_powerChange(prevPower, power, station->m_state->m_address);
@@ -350,13 +350,13 @@ WifiTxVector
 ParfWifiManager::DoGetRtsTxVector(WifiRemoteStation* st)
 {
     NS_LOG_FUNCTION(this << st);
-    /// \todo we could/should implement the ARF algorithm for
+    /// @todo we could/should implement the ARF algorithm for
     /// RTS only by picking a single rate within the BasicRateSet.
     auto station = static_cast<ParfWifiRemoteStation*>(st);
     auto channelWidth = GetChannelWidth(station);
-    if (channelWidth > 20 && channelWidth != 22)
+    if (channelWidth > MHz_u{20} && channelWidth != MHz_u{22})
     {
-        channelWidth = 20;
+        channelWidth = MHz_u{20};
     }
     WifiMode mode;
     if (!GetUseNonErpProtection())

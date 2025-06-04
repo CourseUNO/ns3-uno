@@ -13,8 +13,8 @@
 
 #include "lte-common.h"
 
-#include <ns3/log.h>
-#include <ns3/random-variable-stream.h>
+#include "ns3/log.h"
+#include "ns3/random-variable-stream.h"
 
 namespace ns3
 {
@@ -206,14 +206,14 @@ NoOpComponentCarrierManager::DoSetupDataRadioBearer(EpsBearer bearer,
             lci.mbrDl = 0;
             lci.gbrUl = 0;
             lci.gbrDl = 0;
-        } // data flows only on PC
+        }
         NS_LOG_DEBUG(this << " RNTI " << lci.rnti << "Lcid " << (uint16_t)lci.lcId << " lcGroup "
                           << (uint16_t)lci.lcGroup);
         entry.componentCarrierId = ncc;
         entry.lc = lci;
         entry.msu = m_ccmMacSapUser;
         res.push_back(entry);
-    } // end for
+    }
 
     auto lcidIt = rntiIt->second.m_rlcLcInstantiated.find(lcid);
     if (lcidIt == rntiIt->second.m_rlcLcInstantiated.end())

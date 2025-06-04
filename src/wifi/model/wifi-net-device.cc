@@ -44,19 +44,11 @@ WifiNetDevice::GetTypeId()
                           UintegerValue(MAX_MSDU_SIZE - LLC_SNAP_HEADER_LENGTH),
                           MakeUintegerAccessor(&WifiNetDevice::SetMtu, &WifiNetDevice::GetMtu),
                           MakeUintegerChecker<uint16_t>(1, MAX_MSDU_SIZE - LLC_SNAP_HEADER_LENGTH))
-            .AddAttribute("Channel",
-                          "The channel attached to this device",
-                          PointerValue(),
-                          MakePointerAccessor(&WifiNetDevice::GetChannel),
-                          MakePointerChecker<Channel>(),
-                          TypeId::DEPRECATED,
-                          "class WifiNetDevice; use the Channel "
-                          "attribute of WifiPhy")
             .AddAttribute("Phy",
                           "The PHY layer attached to this device.",
                           PointerValue(),
-                          MakePointerAccessor((Ptr<WifiPhy>(WifiNetDevice::*)() const) &
-                                                  WifiNetDevice::GetPhy,
+                          MakePointerAccessor(static_cast<Ptr<WifiPhy> (WifiNetDevice::*)() const>(
+                                                  &WifiNetDevice::GetPhy),
                                               &WifiNetDevice::SetPhy),
                           MakePointerChecker<WifiPhy>())
             .AddAttribute(
@@ -70,14 +62,14 @@ WifiNetDevice::GetTypeId()
                           PointerValue(),
                           MakePointerAccessor(&WifiNetDevice::GetMac, &WifiNetDevice::SetMac),
                           MakePointerChecker<WifiMac>())
-            .AddAttribute(
-                "RemoteStationManager",
-                "The station manager attached to this device.",
-                PointerValue(),
-                MakePointerAccessor(&WifiNetDevice::SetRemoteStationManager,
-                                    (Ptr<WifiRemoteStationManager>(WifiNetDevice::*)() const) &
-                                        WifiNetDevice::GetRemoteStationManager),
-                MakePointerChecker<WifiRemoteStationManager>())
+            .AddAttribute("RemoteStationManager",
+                          "The station manager attached to this device.",
+                          PointerValue(),
+                          MakePointerAccessor(
+                              &WifiNetDevice::SetRemoteStationManager,
+                              static_cast<Ptr<WifiRemoteStationManager> (WifiNetDevice::*)() const>(
+                                  &WifiNetDevice::GetRemoteStationManager)),
+                          MakePointerChecker<WifiRemoteStationManager>())
             .AddAttribute("RemoteStationManagers",
                           "The remote station managers attached to this device (11be multi-link "
                           "devices only).",

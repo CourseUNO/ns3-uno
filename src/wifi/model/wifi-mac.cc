@@ -146,6 +146,14 @@ WifiMac::GetTypeId()
                 UintegerValue(1024),
                 MakeUintegerAccessor(&WifiMac::GetMpduBufferSize, &WifiMac::SetMpduBufferSize),
                 MakeUintegerChecker<uint16_t>(1, 1024))
+            .AddAttribute(
+                "FrameRetryLimit",
+                "The maximum number of transmission attempts of a frame that are made before a "
+                "failure condition is indicated. This corresponds to the dot11ShortRetryLimit "
+                "parameter in the standard.",
+                UintegerValue(7),
+                MakeUintegerAccessor(&WifiMac::GetFrameRetryLimit, &WifiMac::SetFrameRetryLimit),
+                MakeUintegerChecker<uint32_t>(1, 65535))
             .AddAttribute("VO_MaxAmsduSize",
                           "Maximum length in bytes of an A-MSDU for AC_VO access class "
                           "(capped to 7935 for HT PPDUs and 11398 for VHT/HE/EHT PPDUs). "
@@ -282,12 +290,19 @@ WifiMac::GetTypeId()
                 UintegerValue(0),
                 MakeUintegerAccessor(&WifiMac::SetBkBlockAckInactivityTimeout),
                 MakeUintegerChecker<uint16_t>())
-            .AddTraceSource("MacTx",
-                            "A packet has been received from higher layers and is being processed "
-                            "in preparation for "
-                            "queueing for transmission.",
-                            MakeTraceSourceAccessor(&WifiMac::m_macTxTrace),
-                            "ns3::Packet::TracedCallback")
+            .AddAttribute("RobustAVStreamingSupported",
+                          "Whether or not Robust Audio Video Streaming is supported (only allowed "
+                          "for AP STAs or non-AP that are HT capable).",
+                          BooleanValue(false),
+                          MakeBooleanAccessor(&WifiMac::SetRobustAVStreamingSupported,
+                                              &WifiMac::GetRobustAVStreamingSupported),
+                          MakeBooleanChecker())
+            .AddTraceSource(
+                "MacTx",
+                "A packet has been received by the WifiNetDevice and is about to be enqueued; "
+                "it has a LlcSnapHeader prepended but not yet a WifiMacHeader.",
+                MakeTraceSourceAccessor(&WifiMac::m_macTxTrace),
+                "ns3::Packet::TracedCallback")
             .AddTraceSource(
                 "MacTxDrop",
                 "A packet has been dropped in the MAC layer before being queued for transmission. "
@@ -361,10 +376,10 @@ WifiMac::GetTypeId()
                 MakeTraceSourceAccessor(&WifiMac::m_psduMapResponseTimeoutCallback),
                 "ns3::WifiMac::PsduMapResponseTimeoutCallback")
             .AddTraceSource("IcfDropReason",
-                            "An ICF is dropped by an EMLSR client for the given reason on the "
-                            "link with the given ID. This trace source is actually fed by the "
-                            "EHT Frame Exchange Manager through the m_icfDropCallback member "
-                            "variable.",
+                            "An ICF sent by the given sender is dropped by an EMLSR client for "
+                            "the given reason on the link with the given ID. This trace source "
+                            "is actually fed by the EHT Frame Exchange Manager through the "
+                            "m_icfDropCallback member variable.",
                             MakeTraceSourceAccessor(&WifiMac::m_icfDropCallback),
                             "ns3::WifiMac::IcfDropCallback");
     return tid;
@@ -751,6 +766,9 @@ WifiMac::SetupEdcaQueue(AcIndex ac)
         MakeCallback(&MpduTracedCallback::operator(), &m_nackedMpduCallback));
     edcaIt->second->SetDroppedMpduCallback(
         MakeCallback(&DroppedMpduTracedCallback::operator(), &m_droppedMpduCallback));
+    edcaIt->second->GetWifiMacQueue()->TraceConnectWithoutContext(
+        "Expired",
+        MakeCallback(&WifiMac::NotifyRsmOfExpiredMpdu, this));
 }
 
 void
@@ -1051,6 +1069,7 @@ WifiMac::SetWifiRemoteStationManagers(
     for (auto managerIt = stationManagers.cbegin(); auto& [id, link] : m_links)
     {
         link->stationManager = *managerIt++;
+        link->stationManager->SetLinkId(id);
     }
 
     CompleteConfig();
@@ -1108,6 +1127,10 @@ WifiMac::UpdateLinkId(uint8_t id)
     if (link.channelAccessManager)
     {
         link.channelAccessManager->SetLinkId(id);
+    }
+    if (link.stationManager)
+    {
+        link.stationManager->SetLinkId(id);
     }
 }
 
@@ -1298,6 +1321,12 @@ WifiMac::TidMappedOnLink(Mac48Address mldAddr, WifiDirection dir, uint8_t tid, u
     NS_ABORT_MSG_IF(dir == WifiDirection::BOTH_DIRECTIONS,
                     "Cannot request TID-to-Link mapping for both directions");
 
+    if (!GetWifiRemoteStationManager(linkId)->GetMldAddress(mldAddr).has_value())
+    {
+        // the link has not been setup
+        return false;
+    }
+
     const auto& mappings =
         (dir == WifiDirection::DOWNLINK ? m_dlTidLinkMappings : m_ulTidLinkMappings);
 
@@ -1306,7 +1335,7 @@ WifiMac::TidMappedOnLink(Mac48Address mldAddr, WifiDirection dir, uint8_t tid, u
     if (it == mappings.cend())
     {
         // TID-to-link mapping was not negotiated, TIDs are mapped to all setup links
-        return GetWifiRemoteStationManager(linkId)->GetMldAddress(mldAddr).has_value();
+        return true;
     }
 
     auto linkSetIt = it->second.find(tid);
@@ -1315,7 +1344,7 @@ WifiMac::TidMappedOnLink(Mac48Address mldAddr, WifiDirection dir, uint8_t tid, u
     {
         // If there is no successfully negotiated TID-to-link mapping for a TID, then the TID
         // is mapped to all setup links for DL and UL (Sec. 35.3.7.1.3 of 802.11be D3.1)
-        return GetWifiRemoteStationManager(linkId)->GetMldAddress(mldAddr).has_value();
+        return true;
     }
 
     return std::find(linkSetIt->second.cbegin(), linkSetIt->second.cend(), linkId) !=
@@ -1543,7 +1572,7 @@ WifiMac::ApplyTidLinkMapping(const Mac48Address& mldAddr, WifiDirection dir)
 
 void
 WifiMac::BlockUnicastTxOnLinks(WifiQueueBlockedReason reason,
-                               const Mac48Address& address,
+                               Mac48Address address,
                                const std::set<uint8_t>& linkIds)
 {
     std::stringstream ss;
@@ -1557,9 +1586,9 @@ WifiMac::BlockUnicastTxOnLinks(WifiQueueBlockedReason reason,
     for (const auto linkId : linkIds)
     {
         auto& link = GetLink(linkId);
-        auto linkAddr = link.stationManager->GetAffiliatedStaAddress(address).value_or(address);
+        auto linkAddr = link.stationManager->GetAffiliatedStaAddress(address);
 
-        if (link.stationManager->GetMldAddress(address) == address && linkAddr == address)
+        if (link.stationManager->GetMldAddress(address) == address && !linkAddr.has_value())
         {
             NS_LOG_DEBUG("Link " << +linkId << " has not been setup with the MLD, skip");
             continue;
@@ -1572,14 +1601,14 @@ WifiMac::BlockUnicastTxOnLinks(WifiQueueBlockedReason reason,
                                      acIndex,
                                      {WIFI_QOSDATA_QUEUE, WIFI_CTL_QUEUE},
                                      address,
-                                     GetAddress(),
+                                     GetLocalAddress(address),
                                      {ac.GetLowTid(), ac.GetHighTid()},
                                      {linkId});
             // block queues storing management and control frames that use link addresses
             m_scheduler->BlockQueues(reason,
                                      acIndex,
                                      {WIFI_MGT_QUEUE, WIFI_CTL_QUEUE},
-                                     linkAddr,
+                                     linkAddr.value_or(address),
                                      link.feManager->GetAddress(),
                                      {},
                                      {linkId});
@@ -1589,7 +1618,7 @@ WifiMac::BlockUnicastTxOnLinks(WifiQueueBlockedReason reason,
 
 void
 WifiMac::UnblockUnicastTxOnLinks(WifiQueueBlockedReason reason,
-                                 const Mac48Address& address,
+                                 Mac48Address address,
                                  const std::set<uint8_t>& linkIds)
 {
     NS_ASSERT(m_scheduler);
@@ -1610,9 +1639,9 @@ WifiMac::UnblockUnicastTxOnLinks(WifiQueueBlockedReason reason,
     for (const auto linkId : shuffledLinkIds)
     {
         auto& link = GetLink(linkId);
-        auto linkAddr = link.stationManager->GetAffiliatedStaAddress(address).value_or(address);
+        auto linkAddr = link.stationManager->GetAffiliatedStaAddress(address);
 
-        if (link.stationManager->GetMldAddress(address) == address && linkAddr == address)
+        if (link.stationManager->GetMldAddress(address) == address && !linkAddr.has_value())
         {
             NS_LOG_DEBUG("Link " << +linkId << " has not been setup with the MLD, skip");
             continue;
@@ -1628,14 +1657,14 @@ WifiMac::UnblockUnicastTxOnLinks(WifiQueueBlockedReason reason,
                                        acIndex,
                                        {WIFI_QOSDATA_QUEUE, WIFI_CTL_QUEUE},
                                        address,
-                                       GetAddress(),
+                                       GetLocalAddress(address),
                                        {ac.GetLowTid(), ac.GetHighTid()},
                                        {linkId});
             // unblock queues storing management and control frames that use link addresses
             m_scheduler->UnblockQueues(reason,
                                        acIndex,
                                        {WIFI_MGT_QUEUE, WIFI_CTL_QUEUE},
-                                       linkAddr,
+                                       linkAddr.value_or(address),
                                        link.feManager->GetAddress(),
                                        {},
                                        {linkId});
@@ -1667,6 +1696,37 @@ WifiMac::GetTxBlockedOnLink(AcIndex ac,
         return mask->any();
     }
     return mask->test(static_cast<std::size_t>(reason));
+}
+
+void
+WifiMac::NotifyRsmOfExpiredMpdu(Ptr<const WifiMpdu> mpdu)
+{
+    NS_LOG_FUNCTION(this << *mpdu);
+
+    const auto& hdr = mpdu->GetHeader();
+    const auto remoteAddr = hdr.GetAddr1();
+
+    if (remoteAddr.IsGroup() || hdr.IsCtl() || !hdr.IsRetry() || mpdu->IsInFlight())
+    {
+        return; // nothing to do
+    }
+
+    std::optional<Mac48Address> optAddr;
+    for (const auto& [id, link] : m_links)
+    {
+        if (link->stationManager->GetMldAddress(remoteAddr) == remoteAddr)
+        {
+            // this is a link setup with a remote MLD and remoteAddr is the MLD address
+            optAddr = link->feManager->GetAddress(); // use local address of this setup link
+        }
+    }
+
+    const auto localAddr =
+        optAddr.value_or(GetNLinks() == 1 ? m_address : DoGetLocalAddress(remoteAddr));
+    const auto linkId = GetLinkIdByAddress(localAddr);
+    NS_ASSERT_MSG(linkId.has_value(), "No link with address " << localAddr);
+
+    GetLink(*linkId).stationManager->ReportFinalDataFailed(mpdu);
 }
 
 void
@@ -1824,14 +1884,14 @@ WifiMac::GetLocalAddress(const Mac48Address& remoteAddr) const
             return m_address;
         }
     }
-    // we get here if no ML setup was established between this device and the remote device,
-    // i.e., they are not both multi-link devices
+    // we get here if no ML setup was established between this device and the remote device
     if (GetNLinks() == 1)
     {
         // this is a single link device
         return m_address;
     }
-    // this is an MLD (hence the remote device is single link or unknown)
+    // this is an MLD which performed legacy association with the remote device or the remote device
+    // is unknown
     return DoGetLocalAddress(remoteAddr);
 }
 
@@ -1842,12 +1902,15 @@ WifiMac::DoGetLocalAddress(const Mac48Address& remoteAddr [[maybe_unused]]) cons
 }
 
 WifiMac::OriginatorAgreementOptConstRef
-WifiMac::GetBaAgreementEstablishedAsOriginator(Mac48Address recipient, uint8_t tid) const
+WifiMac::GetBaAgreementEstablishedAsOriginator(Mac48Address recipient,
+                                               uint8_t tid,
+                                               std::optional<Mac48Address> gcrGroupAddr) const
 {
     // BA agreements are indexed by the MLD address if ML setup was performed
     recipient = GetMldAddress(recipient).value_or(recipient);
 
-    auto agreement = GetQosTxop(tid)->GetBaManager()->GetAgreementAsOriginator(recipient, tid);
+    auto agreement =
+        GetQosTxop(tid)->GetBaManager()->GetAgreementAsOriginator(recipient, tid, gcrGroupAddr);
     if (!agreement || !agreement->get().IsEstablished())
     {
         return std::nullopt;
@@ -1856,11 +1919,13 @@ WifiMac::GetBaAgreementEstablishedAsOriginator(Mac48Address recipient, uint8_t t
 }
 
 WifiMac::RecipientAgreementOptConstRef
-WifiMac::GetBaAgreementEstablishedAsRecipient(Mac48Address originator, uint8_t tid) const
+WifiMac::GetBaAgreementEstablishedAsRecipient(Mac48Address originator,
+                                              uint8_t tid,
+                                              std::optional<Mac48Address> gcrGroupAddr) const
 {
     // BA agreements are indexed by the MLD address if ML setup was performed
     originator = GetMldAddress(originator).value_or(originator);
-    return GetQosTxop(tid)->GetBaManager()->GetAgreementAsRecipient(originator, tid);
+    return GetQosTxop(tid)->GetBaManager()->GetAgreementAsRecipient(originator, tid, gcrGroupAddr);
 }
 
 BlockAckType
@@ -2033,6 +2098,19 @@ WifiMac::GetMpduBufferSize() const
 }
 
 void
+WifiMac::SetFrameRetryLimit(uint32_t limit)
+{
+    NS_LOG_FUNCTION(this << limit);
+    m_frameRetryLimit = limit;
+}
+
+uint32_t
+WifiMac::GetFrameRetryLimit() const
+{
+    return m_frameRetryLimit;
+}
+
+void
 WifiMac::SetVoBlockAckThreshold(uint8_t threshold)
 {
     NS_LOG_FUNCTION(this << +threshold);
@@ -2115,24 +2193,23 @@ WifiMac::SetBkBlockAckInactivityTimeout(uint16_t timeout)
 ExtendedCapabilities
 WifiMac::GetExtendedCapabilities() const
 {
-    NS_LOG_FUNCTION(this);
     ExtendedCapabilities capabilities;
-    // TODO: to be completed
+    capabilities.m_robustAvStreaming = GetRobustAVStreamingSupported();
     return capabilities;
 }
 
 HtCapabilities
 WifiMac::GetHtCapabilities(uint8_t linkId) const
 {
-    NS_LOG_FUNCTION(this << +linkId);
     NS_ASSERT(GetHtSupported(linkId));
     HtCapabilities capabilities;
 
     auto phy = GetWifiPhy(linkId);
-    Ptr<HtConfiguration> htConfiguration = GetHtConfiguration();
-    bool sgiSupported = htConfiguration->GetShortGuardIntervalSupported();
-    capabilities.SetLdpc(htConfiguration->GetLdpcSupported());
-    capabilities.SetSupportedChannelWidth(htConfiguration->Get40MHzOperationSupported() ? 1 : 0);
+    auto htConfiguration = GetHtConfiguration();
+    bool sgiSupported = htConfiguration->m_sgiSupported;
+    capabilities.SetLdpc(htConfiguration->m_ldpcSupported);
+    const auto width = phy->GetChannelWidth();
+    capabilities.SetSupportedChannelWidth((width < MHz_u{40}) ? 0 : 1);
     capabilities.SetShortGuardInterval20(sgiSupported);
     capabilities.SetShortGuardInterval40(sgiSupported);
     // Set Maximum A-MSDU Length subfield
@@ -2160,9 +2237,8 @@ WifiMac::GetHtCapabilities(uint8_t linkId) const
         capabilities.SetRxMcsBitmask(mcs.GetMcsValue());
         uint8_t nss = (mcs.GetMcsValue() / 8) + 1;
         NS_ASSERT(nss > 0 && nss < 5);
-        uint64_t dataRate = mcs.GetDataRate(htConfiguration->Get40MHzOperationSupported() ? 40 : 20,
-                                            NanoSeconds(sgiSupported ? 400 : 800),
-                                            nss);
+        uint64_t dataRate =
+            mcs.GetDataRate(std::min(width, MHz_u{40}), NanoSeconds(sgiSupported ? 400 : 800), nss);
         if (dataRate > maxSupportedRate)
         {
             maxSupportedRate = dataRate;
@@ -2183,18 +2259,14 @@ WifiMac::GetHtCapabilities(uint8_t linkId) const
 VhtCapabilities
 WifiMac::GetVhtCapabilities(uint8_t linkId) const
 {
-    NS_LOG_FUNCTION(this << +linkId);
     NS_ASSERT(GetVhtSupported(linkId));
     VhtCapabilities capabilities;
 
     auto phy = GetWifiPhy(linkId);
-    Ptr<HtConfiguration> htConfiguration = GetHtConfiguration();
-    NS_ABORT_MSG_IF(!htConfiguration->Get40MHzOperationSupported(),
-                    "VHT stations have to support 40 MHz operation");
-    Ptr<VhtConfiguration> vhtConfiguration = GetVhtConfiguration();
-    bool sgiSupported = htConfiguration->GetShortGuardIntervalSupported();
-    capabilities.SetSupportedChannelWidthSet(vhtConfiguration->Get160MHzOperationSupported() ? 1
-                                                                                             : 0);
+    auto htConfiguration = GetHtConfiguration();
+    const auto sgiSupported = htConfiguration->m_sgiSupported;
+    const auto width = phy->GetChannelWidth();
+    capabilities.SetSupportedChannelWidthSet((width < MHz_u{160}) ? 0 : 1);
     // Set Maximum MPDU Length subfield
     uint16_t maxAmsduSize =
         std::max({m_voMaxAmsduSize, m_viMaxAmsduSize, m_beMaxAmsduSize, m_bkMaxAmsduSize});
@@ -2217,7 +2289,7 @@ WifiMac::GetVhtCapabilities(uint8_t linkId) const
     // The maximum A-MPDU length in VHT capabilities elements ranges from 2^13-1 to 2^20-1
     capabilities.SetMaxAmpduLength(std::min(std::max(maxAmpduLength, 8191U), 1048575U));
 
-    capabilities.SetRxLdpc(htConfiguration->GetLdpcSupported());
+    capabilities.SetRxLdpc(htConfiguration->m_ldpcSupported);
     capabilities.SetShortGuardIntervalFor80Mhz(sgiSupported);
     capabilities.SetShortGuardIntervalFor160Mhz(sgiSupported);
     uint8_t maxMcs = 0;
@@ -2238,16 +2310,15 @@ WifiMac::GetVhtCapabilities(uint8_t linkId) const
         capabilities.SetTxMcsMap(maxMcs, nss);
     }
     uint64_t maxSupportedRateLGI = 0; // in bit/s
-    MHz_u maxWidth = vhtConfiguration->Get160MHzOperationSupported() ? 160 : 80;
     for (const auto& mcs : phy->GetMcsList(WIFI_MOD_CLASS_VHT))
     {
-        if (!mcs.IsAllowed(maxWidth, 1))
+        if (!mcs.IsAllowed(width, 1))
         {
             continue;
         }
-        if (mcs.GetDataRate(maxWidth) > maxSupportedRateLGI)
+        if (mcs.GetDataRate(width) > maxSupportedRateLGI)
         {
-            maxSupportedRateLGI = mcs.GetDataRate(maxWidth);
+            maxSupportedRateLGI = mcs.GetDataRate(width);
             NS_LOG_DEBUG("Updating maxSupportedRateLGI to " << maxSupportedRateLGI);
         }
     }
@@ -2265,32 +2336,38 @@ WifiMac::GetVhtCapabilities(uint8_t linkId) const
 HeCapabilities
 WifiMac::GetHeCapabilities(uint8_t linkId) const
 {
-    NS_LOG_FUNCTION(this << +linkId);
     NS_ASSERT(GetHeSupported());
     HeCapabilities capabilities;
 
-    Ptr<WifiPhy> phy = GetLink(linkId).phy;
-    Ptr<HtConfiguration> htConfiguration = GetHtConfiguration();
-    Ptr<VhtConfiguration> vhtConfiguration = GetVhtConfiguration();
-    Ptr<HeConfiguration> heConfiguration = GetHeConfiguration();
+    auto phy = GetLink(linkId).phy;
+    auto htConfiguration = GetHtConfiguration();
+    auto heConfiguration = GetHeConfiguration();
     uint8_t channelWidthSet = 0;
-    if ((htConfiguration->Get40MHzOperationSupported()) &&
-        (phy->GetPhyBand() == WIFI_PHY_BAND_2_4GHZ))
+    const auto width = phy->GetChannelWidth();
+    if (const auto band = phy->GetPhyBand(); band == WIFI_PHY_BAND_2_4GHZ)
     {
-        channelWidthSet |= 0x01;
+        if (width >= MHz_u{40})
+        {
+            channelWidthSet |= 0x01;
+        }
     }
-    // we assume that HE stations support 80 MHz operations
-    if ((phy->GetPhyBand() == WIFI_PHY_BAND_5GHZ) || (phy->GetPhyBand() == WIFI_PHY_BAND_6GHZ))
+    else if (band == WIFI_PHY_BAND_5GHZ || band == WIFI_PHY_BAND_6GHZ)
     {
-        channelWidthSet |= 0x02;
-    }
-    if ((vhtConfiguration->Get160MHzOperationSupported()) &&
-        ((phy->GetPhyBand() == WIFI_PHY_BAND_5GHZ) || (phy->GetPhyBand() == WIFI_PHY_BAND_6GHZ)))
-    {
-        channelWidthSet |= 0x04;
+        if (width >= MHz_u{40})
+        {
+            channelWidthSet |= 0x02;
+        }
+        if (width >= MHz_u{160})
+        {
+            channelWidthSet |= 0x04;
+            if (phy->GetOperatingChannel().GetNSegments() > 1)
+            {
+                channelWidthSet |= 0x08;
+            }
+        }
     }
     capabilities.SetChannelWidthSet(channelWidthSet);
-    capabilities.SetLdpcCodingInPayload(htConfiguration->GetLdpcSupported());
+    capabilities.SetLdpcCodingInPayload(htConfiguration->m_ldpcSupported);
     if (heConfiguration->GetGuardInterval().GetNanoSeconds() == 800)
     {
         // todo: We assume for now that if we support 800ns GI then 1600ns GI is supported as well
@@ -2358,7 +2435,6 @@ WifiMac::GetHe6GhzBandCapabilities(uint8_t linkId) const
 EhtCapabilities
 WifiMac::GetEhtCapabilities(uint8_t linkId) const
 {
-    NS_LOG_FUNCTION(this << +linkId);
     NS_ASSERT(GetEhtSupported());
     EhtCapabilities capabilities;
 
@@ -2393,15 +2469,16 @@ WifiMac::GetEhtCapabilities(uint8_t linkId) const
     capabilities.SetMaxAmpduLength(std::min(std::max(maxAmpduLength, 8388607U), 16777215U));
 
     // Set the PHY capabilities
-    const bool support4096Qam = phy->IsMcsSupported(WIFI_MOD_CLASS_EHT, 12);
+    const auto support4096Qam = phy->IsMcsSupported(WIFI_MOD_CLASS_EHT, 12);
     capabilities.m_phyCapabilities.supportTx1024And4096QamForRuSmallerThan242Tones =
         support4096Qam ? 1 : 0;
     capabilities.m_phyCapabilities.supportRx1024And4096QamForRuSmallerThan242Tones =
         support4096Qam ? 1 : 0;
 
-    const uint8_t maxTxNss = phy->GetMaxSupportedTxSpatialStreams();
-    const uint8_t maxRxNss = phy->GetMaxSupportedRxSpatialStreams();
-    if (auto htConfig = GetHtConfiguration(); !htConfig->Get40MHzOperationSupported())
+    const auto maxTxNss = phy->GetMaxSupportedTxSpatialStreams();
+    const auto maxRxNss = phy->GetMaxSupportedRxSpatialStreams();
+    const auto width = phy->GetChannelWidth();
+    if (width == MHz_u{20})
     {
         for (auto maxMcs : {7, 9, 11, 13})
         {
@@ -2429,7 +2506,7 @@ WifiMac::GetEhtCapabilities(uint8_t linkId) const
                 phy->IsMcsSupported(WIFI_MOD_CLASS_EHT, maxMcs) ? maxTxNss : 0);
         }
     }
-    if (auto vhtConfig = GetVhtConfiguration(); vhtConfig->Get160MHzOperationSupported())
+    if (width >= MHz_u{160})
     {
         for (auto maxMcs : {9, 11, 13})
         {
@@ -2443,8 +2520,21 @@ WifiMac::GetEhtCapabilities(uint8_t linkId) const
                 phy->IsMcsSupported(WIFI_MOD_CLASS_EHT, maxMcs) ? maxTxNss : 0);
         }
     }
-    // 320 MHz not supported yet
-
+    if (width >= MHz_u{320})
+    {
+        capabilities.m_phyCapabilities.support320MhzIn6Ghz = true;
+        for (auto maxMcs : {9, 11, 13})
+        {
+            capabilities.SetSupportedRxEhtMcsAndNss(
+                EhtMcsAndNssSet::EHT_MCS_MAP_TYPE_320_MHZ,
+                maxMcs,
+                phy->IsMcsSupported(WIFI_MOD_CLASS_EHT, maxMcs) ? maxRxNss : 0);
+            capabilities.SetSupportedTxEhtMcsAndNss(
+                EhtMcsAndNssSet::EHT_MCS_MAP_TYPE_320_MHZ,
+                maxMcs,
+                phy->IsMcsSupported(WIFI_MOD_CLASS_EHT, maxMcs) ? maxTxNss : 0);
+        }
+    }
     return capabilities;
 }
 
@@ -2496,6 +2586,108 @@ WifiMac::GetMaxAmsduSize(AcIndex ac) const
         return 0;
     }
     return maxSize;
+}
+
+void
+WifiMac::SetRobustAVStreamingSupported(bool enable)
+{
+    NS_LOG_FUNCTION(this << enable);
+    m_robustAVStreamingSupported = enable;
+}
+
+bool
+WifiMac::GetRobustAVStreamingSupported() const
+{
+    NS_ASSERT_MSG(!m_robustAVStreamingSupported || GetDevice()->GetHtConfiguration(),
+                  "Robust AV Streaming requires STA to be HT-capable");
+    return m_robustAVStreamingSupported;
+}
+
+void
+WifiMac::RecordCapabilities(const MgtFrameType& frame, const Mac48Address& from, uint8_t linkId)
+{
+    NS_LOG_FUNCTION(this << frame.index() << from << linkId);
+    auto remoteStationManager = GetWifiRemoteStationManager(linkId);
+    auto phy = GetWifiPhy(linkId);
+
+    // lambda processing Information Elements included in all frame types
+    auto recordFromIes = [&](auto&& frame) {
+        NS_ASSERT(frame.template Get<SupportedRates>());
+        const auto rates = AllSupportedRates{*frame.template Get<SupportedRates>(),
+                                             frame.template Get<ExtendedSupportedRatesIE>()};
+        for (const auto& mode : phy->GetModeList())
+        {
+            if (rates.IsSupportedRate(mode.GetDataRate(phy->GetChannelWidth())))
+            {
+                remoteStationManager->AddSupportedMode(from, mode);
+                if (rates.IsBasicRate(mode.GetDataRate(phy->GetChannelWidth())))
+                {
+                    remoteStationManager->AddBasicMode(mode);
+                }
+            }
+        }
+
+        // we do not return if HT is not supported because HE STAs operating in
+        // the 6 GHz band do not support VHT
+        if (GetHtSupported(linkId))
+        {
+            /* HT station */
+            if (const auto& htCapabilities = frame.template Get<HtCapabilities>())
+            {
+                remoteStationManager->AddStationHtCapabilities(from, *htCapabilities);
+            }
+            if (const auto& extendedCapabilities = frame.template Get<ExtendedCapabilities>())
+            {
+                remoteStationManager->AddStationExtendedCapabilities(from, *extendedCapabilities);
+            }
+        }
+
+        // we do not return if VHT is not supported because HE STAs operating in
+        // the 2.4 GHz or 6 GHz band do not support VHT
+        if (GetVhtSupported(linkId))
+        {
+            const auto& vhtCapabilities = frame.template Get<VhtCapabilities>();
+            // we will always fill in RxHighestSupportedLgiDataRate field at TX, so this can be used
+            // to check whether it supports VHT
+            if (vhtCapabilities.has_value() &&
+                vhtCapabilities->GetRxHighestSupportedLgiDataRate() > 0)
+            {
+                remoteStationManager->AddStationVhtCapabilities(from, *vhtCapabilities);
+            }
+        }
+
+        if (!GetHeSupported())
+        {
+            return;
+        }
+
+        const auto& heCapabilities = frame.template Get<HeCapabilities>();
+        if (heCapabilities.has_value() && heCapabilities->GetSupportedMcsAndNss() != 0)
+        {
+            remoteStationManager->AddStationHeCapabilities(from, *heCapabilities);
+        }
+
+        if (Is6GhzBand(linkId))
+        {
+            if (const auto& he6GhzCapabilities = frame.template Get<He6GhzBandCapabilities>())
+            {
+                remoteStationManager->AddStationHe6GhzCapabilities(from, *he6GhzCapabilities);
+            }
+        }
+
+        if (!GetEhtSupported())
+        {
+            return;
+        }
+
+        if (const auto& ehtCapabilities = frame.template Get<EhtCapabilities>())
+        {
+            remoteStationManager->AddStationEhtCapabilities(from, *ehtCapabilities);
+        }
+    };
+
+    // process Information Elements included in the current frame variant
+    std::visit(recordFromIes, frame);
 }
 
 } // namespace ns3

@@ -1,6 +1,6 @@
 EPSTOPDF = epstopdf
 DIA = dia
-CONVERT = convert
+CONVERT = convert -density 300
 
 SRC = ../../src
 # Temporary source directory, for build
@@ -100,6 +100,7 @@ SOURCES = \
 	$(SRC)/flow-monitor/doc/flow-monitor.rst \
 	$(SRC)/sixlowpan/doc/sixlowpan.rst \
 	$(SRC)/lr-wpan/doc/lr-wpan.rst \
+	$(SRC)/zigbee/doc/zigbee.rst \
 
 # list all model library figure files that need to be copied to
 # $SOURCETEMP/figures.  For each figure to be included in all
@@ -117,6 +118,8 @@ SOURCEFIGS = \
 	$(SRC)/applications/doc/http-num-of-embedded-objects.png \
 	$(SRC)/applications/doc/http-parsing-time.png \
 	$(SRC)/applications/doc/http-reading-time.png \
+	$(SRC)/dsr/doc/figures/dsrRreq.dia \
+	$(SRC)/dsr/doc/figures/dsrRrep.dia \
 	$(SRC)/network/doc/packet.dia \
 	$(SRC)/network/doc/node.dia \
 	$(SRC)/network/doc/buffer.dia \
@@ -148,6 +151,7 @@ SOURCEFIGS = \
 	$(SRC)/wifi/doc/source/figures/ack-su-format.png \
 	$(SRC)/wifi/doc/source/figures/assoc-manager.eps \
 	$(SRC)/wifi/doc/source/figures/emlsr-dl-txop.eps \
+	$(SRC)/wifi/doc/source/figures/emlsr-txop-ended-trace.eps \
 	$(SRC)/wifi/doc/source/figures/emlsr-ul-txop.eps \
 	$(SRC)/wifi/doc/source/figures/mu-bar.pdf \
 	$(SRC)/wifi/doc/source/figures/mu-bar.png \
@@ -365,12 +369,18 @@ SOURCEFIGS = \
 	$(SRC)/lr-wpan/doc/802-15-4-ber.eps \
 	$(SRC)/lr-wpan/doc/802-15-4-per-sens.eps \
 	$(SRC)/lr-wpan/doc/802-15-4-psr-distance.eps \
+	$(SRC)/flow-monitor/doc/figures/flowmonitorArq.dia \
 	$(SRC)/energy/doc/figures/dischargeCurve.png \
 	$(SRC)/energy/doc/figures/energyFramework.dia \
 	$(SRC)/energy/doc/figures/leadacid.png \
 	$(SRC)/energy/doc/figures/liion.png \
 	$(SRC)/energy/doc/figures/nicd.png \
-	$(SRC)/energy/doc/figures/nimh.png
+	$(SRC)/energy/doc/figures/nimh.png \
+	$(SRC)/zigbee/doc/figures/zigbeeStackArch.dia \
+	$(SRC)/zigbee/doc/figures/manyToOne.dia \
+	$(SRC)/zigbee/doc/figures/mesh.dia \
+	$(SRC)/internet-apps/doc/figures/dhcpv6-message-exchange.dia \
+	$(SRC)/internet-apps/doc/figures/stateful-dhcpv6-format.dia
 
 # specify figures from which .png and .pdf figures need to be
 # generated (all dia and eps figures)
@@ -469,9 +479,13 @@ IMAGES_EPS = \
 	$(FIGURES)/802-15-4-per-sens.eps \
 	$(FIGURES)/802-15-4-psr-distance.eps \
 	$(FIGURES)/energyFramework.eps \
+	$(FIGURES)/flowmonitorArq.eps \
+	$(FIGURES)/dsrRreq.eps \
+	$(FIGURES)/dsrRrep.eps \
 	$(FIGURES)/clear-channel.eps \
 	$(FIGURES)/assoc-manager.eps \
 	$(FIGURES)/emlsr-dl-txop.eps \
+	$(FIGURES)/emlsr-txop-ended-trace.eps \
 	$(FIGURES)/emlsr-ul-txop.eps \
 	$(FIGURES)/nist-frame-success-rate.eps \
 	$(FIGURES)/nist-frame-success-rate-n.eps \
@@ -492,6 +506,12 @@ IMAGES_EPS = \
 	$(FIGURES)/lte-test-rlf-two-enb.eps \
 	$(FIGURES)/lena-radio-link-failure-one-enb.eps \
 	$(FIGURES)/lena-radio-link-failure-two-enb.eps \
+	$(FIGURES)/zigbeeStackArch.eps \
+	$(FIGURES)/manyToOne.eps \
+	$(FIGURES)/mesh.eps \
+	$(FIGURES)/dhcpv6-message-exchange.eps \
+	$(FIGURES)/stateful-dhcpv6-format.eps
+
 
 # rescale pdf figures as necessary
 $(FIGURES)/testbed.pdf_width = 5in
@@ -553,7 +573,11 @@ $(FIGURES)/nist-frame-success-rate-ac.pdf_width = 12cm
 $(FIGURES)/nist-frame-success-rate-ax.pdf_width = 12cm
 $(FIGURES)/assoc-manager.pdf_width = 12cm
 $(FIGURES)/emlsr-dl-txop.pdf_width = 12cm
+$(FIGURES)/emlsr-txop-ended-trace.pdf_width = 8cm
 $(FIGURES)/emlsr-ul-txop.pdf_width = 12cm
+$(FIGURES)/zigbeeStackArch.pdf_width = 6cm
+$(FIGURES)/manyToOne.pdf_width = 6cm
+$(FIGURES)/mesh.pdf_width = 6cm
 
 IMAGES_PNG = ${IMAGES_EPS:.eps=.png}
 IMAGES_PDF = ${IMAGES_EPS:.eps=.pdf}

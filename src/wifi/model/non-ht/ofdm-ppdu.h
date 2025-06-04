@@ -15,8 +15,8 @@
 #include "ns3/wifi-ppdu.h"
 
 /**
- * \file
- * \ingroup wifi
+ * @file
+ * @ingroup wifi
  * Declaration of ns3::OfdmPpdu class.
  */
 
@@ -26,8 +26,8 @@ namespace ns3
 class WifiPsdu;
 
 /**
- * \brief OFDM PPDU (11a)
- * \ingroup wifi
+ * @brief OFDM PPDU (11a)
+ * @ingroup wifi
  *
  * OfdmPpdu stores a preamble, PHY headers and a PSDU of a PPDU with non-HT header,
  * i.e., PPDU that uses OFDM modulation.
@@ -47,43 +47,45 @@ class OfdmPpdu : public WifiPpdu
         /**
          * Fill the RATE field of L-SIG (in bit/s).
          *
-         * \param rate the RATE field of L-SIG expressed in bit/s
-         * \param channelWidth the channel width
+         * @param rate the RATE field of L-SIG expressed in bit/s
+         * @param channelWidth the channel width
          */
-        void SetRate(uint64_t rate, MHz_u channelWidth = 20);
+        void SetRate(uint64_t rate, MHz_u channelWidth = MHz_u{20});
         /**
          * Return the RATE field of L-SIG (in bit/s).
          *
-         * \param channelWidth the channel width
-         * \return the RATE field of L-SIG expressed in bit/s
+         * @param channelWidth the channel width
+         * @return the RATE field of L-SIG expressed in bit/s
          */
-        uint64_t GetRate(MHz_u channelWidth = 20) const;
+        uint64_t GetRate(MHz_u channelWidth = MHz_u{20}) const;
         /**
          * Fill the LENGTH field of L-SIG (in bytes).
          *
-         * \param length the LENGTH field of L-SIG expressed in bytes
+         * @param length the LENGTH field of L-SIG expressed in bytes
          */
         void SetLength(uint16_t length);
         /**
          * Return the LENGTH field of L-SIG (in bytes).
          *
-         * \return the LENGTH field of L-SIG expressed in bytes
+         * @return the LENGTH field of L-SIG expressed in bytes
          */
         uint16_t GetLength() const;
 
       private:
         uint8_t m_rate;    ///< RATE field
         uint16_t m_length; ///< LENGTH field
-    };                     // class LSigHeader
+
+        // end of class LSigHeader
+    };
 
     /**
      * Create an OFDM PPDU.
      *
-     * \param psdu the PHY payload (PSDU)
-     * \param txVector the TXVECTOR that was used for this PPDU
-     * \param channel the operating channel of the PHY used to transmit this PPDU
-     * \param uid the unique ID of this PPDU
-     * \param instantiateLSig flag used to instantiate LSigHeader (set LSigHeader's
+     * @param psdu the PHY payload (PSDU)
+     * @param txVector the TXVECTOR that was used for this PPDU
+     * @param channel the operating channel of the PHY used to transmit this PPDU
+     * @param uid the unique ID of this PPDU
+     * @param instantiateLSig flag used to instantiate LSigHeader (set LSigHeader's
      *                        rate and length), should be disabled by child classes
      */
     OfdmPpdu(Ptr<const WifiPsdu> psdu,
@@ -104,31 +106,31 @@ class OfdmPpdu : public WifiPpdu
     /**
      * Fill in the PHY headers.
      *
-     * \param txVector the TXVECTOR that was used for this PPDU
-     * \param psduSize the size duration of the PHY payload (PSDU)
+     * @param txVector the TXVECTOR that was used for this PPDU
+     * @param psduSize the size duration of the PHY payload (PSDU)
      */
     void SetPhyHeaders(const WifiTxVector& txVector, std::size_t psduSize);
 
     /**
      * Fill in the L-SIG header.
      *
-     * \param lSig the L-SIG header to fill in
-     * \param txVector the TXVECTOR that was used for this PPDU
-     * \param psduSize the size duration of the PHY payload (PSDU)
+     * @param lSig the L-SIG header to fill in
+     * @param txVector the TXVECTOR that was used for this PPDU
+     * @param psduSize the size duration of the PHY payload (PSDU)
      */
     void SetLSigHeader(LSigHeader& lSig, const WifiTxVector& txVector, std::size_t psduSize) const;
 
     /**
      * Fill in the TXVECTOR from L-SIG header.
      *
-     * \param txVector the TXVECTOR to fill in
-     * \param lSig the L-SIG header
+     * @param txVector the TXVECTOR to fill in
+     * @param lSig the L-SIG header
      */
     virtual void SetTxVectorFromLSigHeader(WifiTxVector& txVector, const LSigHeader& lSig) const;
 
     MHz_u m_channelWidth; //!< the channel width used to transmit that PPDU
                           //!< (needed to distinguish 5 MHz, 10 MHz or 20 MHz PPDUs)
-};                        // class OfdmPpdu
+};
 
 } // namespace ns3
 

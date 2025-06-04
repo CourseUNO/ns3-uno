@@ -8,11 +8,13 @@ endif()
 set(source_files
     helper/athstats-helper.cc
     helper/spectrum-wifi-helper.cc
+    helper/wifi-co-trace-helper.cc
     helper/wifi-helper.cc
     helper/wifi-mac-helper.cc
     helper/wifi-radio-energy-model-helper.cc
     helper/yans-wifi-helper.cc
     helper/wifi-phy-rx-trace-helper.cc
+    helper/wifi-tx-stats-helper.cc
     model/addba-extension.cc
     model/adhoc-wifi-mac.cc
     model/ampdu-subframe-header.cc
@@ -30,6 +32,9 @@ set(source_files
     model/eht/advanced-ap-emlsr-manager.cc
     model/eht/advanced-emlsr-manager.cc
     model/eht/ap-emlsr-manager.cc
+    model/eht/advanced-ap-emlsr-manager.cc
+    model/eht/common-info-basic-mle.cc
+    model/eht/common-info-probe-req-mle.cc
     model/eht/default-ap-emlsr-manager.cc
     model/eht/default-emlsr-manager.cc
     model/eht/eht-capabilities.cc
@@ -39,6 +44,7 @@ set(source_files
     model/eht/tid-to-link-mapping-element.cc
     model/eht/eht-phy.cc
     model/eht/eht-ppdu.cc
+    model/eht/eht-ru.cc
     model/eht/emlsr-manager.cc
     model/eht/multi-link-element.cc
     model/error-rate-model.cc
@@ -46,6 +52,8 @@ set(source_files
     model/fcfs-wifi-queue-scheduler.cc
     model/frame-capture-model.cc
     model/frame-exchange-manager.cc
+    model/gcr-group-address.cc
+    model/gcr-manager.cc
     model/he/constant-obss-pd-algorithm.cc
     model/he/he-6ghz-band-capabilities.cc
     model/he/he-capabilities.cc
@@ -129,8 +137,10 @@ set(source_files
     model/wifi-acknowledgment.cc
     model/wifi-assoc-manager.cc
     model/wifi-bandwidth-filter.cc
+    model/wifi-constants.cc
     model/wifi-default-ack-manager.cc
     model/wifi-default-assoc-manager.cc
+    model/wifi-default-gcr-manager.cc
     model/wifi-default-protection-manager.cc
     model/wifi-information-element.cc
     model/wifi-mac-header.cc
@@ -154,6 +164,7 @@ set(source_files
     model/wifi-radio-energy-model.cc
     model/wifi-remote-station-info.cc
     model/wifi-remote-station-manager.cc
+    model/wifi-ru.cc
     model/wifi-spectrum-phy-interface.cc
     model/wifi-spectrum-signal-parameters.cc
     model/wifi-standards.cc
@@ -171,11 +182,13 @@ set(source_files
 set(header_files
     helper/athstats-helper.h
     helper/spectrum-wifi-helper.h
+    helper/wifi-co-trace-helper.h
     helper/wifi-helper.h
     helper/wifi-mac-helper.h
     helper/wifi-radio-energy-model-helper.h
     helper/yans-wifi-helper.h
     helper/wifi-phy-rx-trace-helper.h
+    helper/wifi-tx-stats-helper.h
     model/addba-extension.h
     model/adhoc-wifi-mac.h
     model/ampdu-subframe-header.h
@@ -193,6 +206,8 @@ set(header_files
     model/eht/advanced-ap-emlsr-manager.h
     model/eht/advanced-emlsr-manager.h
     model/eht/ap-emlsr-manager.h
+    model/eht/common-info-basic-mle.h
+    model/eht/common-info-probe-req-mle.h
     model/eht/default-ap-emlsr-manager.h
     model/eht/default-emlsr-manager.h
     model/eht/eht-capabilities.h
@@ -202,6 +217,7 @@ set(header_files
     model/eht/tid-to-link-mapping-element.h
     model/eht/eht-phy.h
     model/eht/eht-ppdu.h
+    model/eht/eht-ru.h
     model/eht/emlsr-manager.h
     model/eht/multi-link-element.h
     model/error-rate-model.h
@@ -209,6 +225,8 @@ set(header_files
     model/fcfs-wifi-queue-scheduler.h
     model/frame-capture-model.h
     model/frame-exchange-manager.h
+    model/gcr-group-address.h
+    model/gcr-manager.h
     model/he/constant-obss-pd-algorithm.h
     model/he/he-6ghz-band-capabilities.h
     model/he/he-capabilities.h
@@ -292,8 +310,10 @@ set(header_files
     model/wifi-acknowledgment.h
     model/wifi-assoc-manager.h
     model/wifi-bandwidth-filter.h
+    model/wifi-constants.h
     model/wifi-default-ack-manager.h
     model/wifi-default-assoc-manager.h
+    model/wifi-default-gcr-manager.h
     model/wifi-default-protection-manager.h
     model/wifi-information-element.h
     model/wifi-mac-header.h
@@ -323,6 +343,7 @@ set(header_files
     model/wifi-radio-energy-model.h
     model/wifi-remote-station-info.h
     model/wifi-remote-station-manager.h
+    model/wifi-ru.h
     model/wifi-spectrum-phy-interface.h
     model/wifi-spectrum-signal-parameters.h
     model/wifi-standards.h
@@ -357,11 +378,17 @@ build_lib(
     test/spectrum-wifi-phy-test.cc
     test/tx-duration-test.cc
     test/wifi-aggregation-test.cc
+    test/wifi-channel-settings-test.cc
+    test/wifi-co-trace-helper-test.cc
     test/wifi-dynamic-bw-op-test.cc
     test/wifi-eht-info-elems-test.cc
-    test/wifi-emlsr-test.cc
+    test/wifi-emlsr-basic-exchanges-test.cc
+    test/wifi-emlsr-enabling-test.cc
+    test/wifi-emlsr-link-switch-test.cc
+    test/wifi-emlsr-test-base.cc
     test/wifi-error-rate-models-test.cc
     test/wifi-fils-frame-test.cc
+    test/wifi-gcr-test.cc
     test/wifi-he-info-elems-test.cc
     test/wifi-ie-fragment-test.cc
     test/wifi-mac-ofdma-test.cc
@@ -372,6 +399,8 @@ build_lib(
     test/wifi-phy-rx-trace-helper-test.cc
     test/wifi-phy-thresholds-test.cc
     test/wifi-primary-channels-test.cc
+    test/wifi-probe-exchange-test.cc
+    test/wifi-retransmit-test.cc
     test/wifi-ru-allocation-test.cc
     test/wifi-channel-switching-test.cc
     test/wifi-test.cc
@@ -381,4 +410,5 @@ build_lib(
     test/wifi-non-ht-dup-test.cc
     test/wifi-phy-mu-mimo-test.cc
     test/wifi-operating-channel-test.cc
+    test/wifi-tx-stats-helper-test.cc
 )

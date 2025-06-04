@@ -9,7 +9,18 @@
 #include "matrix-array.h"
 
 #ifdef HAVE_EIGEN3
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
+
 #include <Eigen/Dense>
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 namespace ns3

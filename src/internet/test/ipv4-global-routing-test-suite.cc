@@ -106,9 +106,9 @@ NS_LOG_COMPONENT_DEFINE("Ipv4GlobalRoutingTestSuite");
 //              route to 10.1.1.0 gw 10.1.2.1
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 GlobalRouting Link test
+ * @brief IPv4 GlobalRouting Link test
  */
 class LinkTest : public TestCase
 {
@@ -190,9 +190,9 @@ LinkTest::DoRun()
 }
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 GlobalRouting LAN test
+ * @brief IPv4 GlobalRouting LAN test
  */
 class LanTest : public TestCase
 {
@@ -271,9 +271,9 @@ LanTest::DoRun()
 }
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 GlobalRouting Two Link test
+ * @brief IPv4 GlobalRouting Two Link test
  */
 class TwoLinkTest : public TestCase
 {
@@ -390,9 +390,9 @@ TwoLinkTest::DoRun()
 }
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 GlobalRouting Two LAN test
+ * @brief IPv4 GlobalRouting Two LAN test
  */
 class TwoLanTest : public TestCase
 {
@@ -490,9 +490,9 @@ TwoLanTest::DoRun()
 }
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 GlobalRouting Bridge test
+ * @brief IPv4 GlobalRouting Bridge test
  */
 class BridgeTest : public TestCase
 {
@@ -673,9 +673,9 @@ BridgeTest::DoRun()
 }
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 GlobalRouting Two bridges test
+ * @brief IPv4 GlobalRouting Two bridges test
  */
 class TwoBridgeTest : public TestCase
 {
@@ -830,9 +830,9 @@ TwoBridgeTest::DoRun()
 }
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 Dynamic GlobalRouting test
+ * @brief IPv4 Dynamic GlobalRouting test
  */
 class Ipv4DynamicGlobalRoutingTestCase : public TestCase
 {
@@ -842,20 +842,20 @@ class Ipv4DynamicGlobalRoutingTestCase : public TestCase
 
   private:
     /**
-     * \brief Send some data
-     * \param index Index of the socket to use.
+     * @brief Send some data
+     * @param index Index of the socket to use.
      */
     void SendData(uint8_t index);
 
     /**
-     * \brief Shutdown a socket
-     * \param index Index of the socket to close.
+     * @brief Shutdown a socket
+     * @param index Index of the socket to close.
      */
     void ShutDownSock(uint8_t index);
 
     /**
      * Handle an incoming packet
-     * \param socket The input socket.
+     * @param socket The input socket.
      */
     void HandleRead(Ptr<Socket> socket);
     void DoRun() override;
@@ -875,8 +875,8 @@ Ipv4DynamicGlobalRoutingTestCase::Ipv4DynamicGlobalRoutingTestCase()
     : TestCase("Dynamic global routing example"),
       m_count(0)
 {
-    m_firstInterface.resize(16);
-    m_secondInterface.resize(16);
+    m_firstInterface.resize(16, 0);
+    m_secondInterface.resize(16, 0);
     m_dataRate = DataRate("2kbps");
     m_packetSize = 50;
 }
@@ -988,11 +988,11 @@ Ipv4DynamicGlobalRoutingTestCase::DoRun()
 
     devHelper.SetNetDevicePointToPointMode(true);
     NetDeviceContainer d0d2 = devHelper.Install(n0n2);
-    devHelper.SetNetDevicePointToPointMode(false);
-
     NetDeviceContainer d1d6 = devHelper.Install(n1n6);
     NetDeviceContainer d1d2 = devHelper.Install(n1n2);
     NetDeviceContainer d5d6 = devHelper.Install(n5n6);
+
+    devHelper.SetNetDevicePointToPointMode(false);
     NetDeviceContainer d2345 = devHelper.Install(n2345);
 
     // Later, we add IP addresses.
@@ -1027,8 +1027,8 @@ Ipv4DynamicGlobalRoutingTestCase::DoRun()
     sendSockA.first->Connect(InetSocketAddress(i5i6.GetAddress(1), port));
     sendSockA.second = true;
     m_sendSocks.push_back(sendSockA);
-    Simulator::Schedule(Seconds(1.0), &Ipv4DynamicGlobalRoutingTestCase::SendData, this, 0);
-    Simulator::Schedule(Seconds(10.0), &Ipv4DynamicGlobalRoutingTestCase::ShutDownSock, this, 0);
+    Simulator::Schedule(Seconds(1), &Ipv4DynamicGlobalRoutingTestCase::SendData, this, 0);
+    Simulator::Schedule(Seconds(10), &Ipv4DynamicGlobalRoutingTestCase::ShutDownSock, this, 0);
 
     std::pair<Ptr<Socket>, bool> sendSockB;
     sendSockB.first = Socket::CreateSocket(c.Get(1), tid);
@@ -1036,8 +1036,8 @@ Ipv4DynamicGlobalRoutingTestCase::DoRun()
     sendSockB.first->Connect(InetSocketAddress(i1i6.GetAddress(1), port));
     sendSockB.second = true;
     m_sendSocks.push_back(sendSockB);
-    Simulator::Schedule(Seconds(11.0), &Ipv4DynamicGlobalRoutingTestCase::SendData, this, 1);
-    Simulator::Schedule(Seconds(16.0), &Ipv4DynamicGlobalRoutingTestCase::ShutDownSock, this, 1);
+    Simulator::Schedule(Seconds(11), &Ipv4DynamicGlobalRoutingTestCase::SendData, this, 1);
+    Simulator::Schedule(Seconds(16), &Ipv4DynamicGlobalRoutingTestCase::ShutDownSock, this, 1);
 
     // Create an optional packet sink to receive these packets
     Ptr<Socket> sink2 = Socket::CreateSocket(c.Get(6), tid);
@@ -1071,76 +1071,52 @@ Ipv4DynamicGlobalRoutingTestCase::DoRun()
     Simulator::Run();
 
     NS_TEST_ASSERT_MSG_EQ(m_count, 70, "Dynamic global routing did not deliver all packets");
-    // Test that for node n6, the interface facing n5 receives packets at
+    // Test that for node n6, the interface facing n1 receives packets at
     // times (1-2), (4-6), (8-10), (11-12), (14-16) and the interface
-    // facing n1 receives packets at times (2-4), (6-8), (12-13)
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[1],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[1]));
-    NS_TEST_ASSERT_MSG_EQ(m_secondInterface[2],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_secondInterface[2]));
-    NS_TEST_ASSERT_MSG_EQ(m_secondInterface[3],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_secondInterface[3]));
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[4],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[4]));
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[5],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[5]));
-    NS_TEST_ASSERT_MSG_EQ(m_secondInterface[6],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_secondInterface[6]));
-    NS_TEST_ASSERT_MSG_EQ(m_secondInterface[7],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_secondInterface[7]));
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[8],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[8]));
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[9],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[9]));
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[10],
-                          0,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[10]));
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[11],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[11]));
-    NS_TEST_ASSERT_MSG_EQ(m_secondInterface[12],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_secondInterface[12]));
-    NS_TEST_ASSERT_MSG_EQ(m_secondInterface[13],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_secondInterface[13]));
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[14],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[14]));
-    NS_TEST_ASSERT_MSG_EQ(m_firstInterface[15],
-                          5,
-                          "Dynamic global routing did not deliver all packets "
-                              << int(m_firstInterface[15]));
+    // facing n5 receives packets at times (2-4), (6-8), (12-13)
+
+    // Note: there are two sending sockets, both on n1.
+    // The first socket sends packets at time (1-10), the second at time (11, 16).
+    // The first socket sends packets to n6, targeting the address facing n5.
+    // The second socket sends packets to n6, targeting the address facing n1.
+    // This actually doesn't matter, as n6 will accept packets sent to the "wrong" address.
+    //
+    // The shortest path netween n1 and n6 is the direct one, but the topology changes during the
+    // simulation:
+    // - (2-4): removal from n1 of the interface toward n6
+    // - (6-8): removal from n6 of the interface toward n1
+    // - (12-14): removal from n1 of the interface toward n6
+    // When the link is broken, packets are rerouted though the longest (and only) path, reaching
+    // n6 though n5.
+
+    std::vector<uint8_t> firstInterfaceTest{0, 5, 0, 0, 5, 5, 0, 0, 5, 5, 0, 5, 0, 0, 5, 5};
+    std::vector<uint8_t> secondInterfaceTest{0, 0, 5, 5, 0, 0, 5, 5, 0, 0, 0, 0, 5, 5, 0, 0};
+
+    for (uint32_t index = 0; index < firstInterfaceTest.size(); index++)
+    {
+        NS_TEST_ASSERT_MSG_EQ(firstInterfaceTest[index],
+                              m_firstInterface[index],
+                              "Dynamic global routing did deliver the wrong number of packets "
+                              "to the first interface at time "
+                                  << index);
+    }
+
+    for (uint32_t index = 0; index < secondInterfaceTest.size(); index++)
+    {
+        NS_TEST_ASSERT_MSG_EQ(secondInterfaceTest[index],
+                              m_secondInterface[index],
+                              "Dynamic global routing did deliver the wrong number of packets "
+                              "to the second interface at time "
+                                  << index);
+    }
+
     Simulator::Destroy();
 }
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 Dynamic GlobalRouting /32 test
+ * @brief IPv4 Dynamic GlobalRouting /32 test
  */
 class Ipv4GlobalRoutingSlash32TestCase : public TestCase
 {
@@ -1151,20 +1127,20 @@ class Ipv4GlobalRoutingSlash32TestCase : public TestCase
     Ptr<Packet> m_receivedPacket; //!< number of received packets
 
     /**
-     * \brief Receive a packet.
-     * \param socket The receiving socket.
+     * @brief Receive a packet.
+     * @param socket The receiving socket.
      */
     void ReceivePkt(Ptr<Socket> socket);
     /**
-     * \brief Send a packet.
-     * \param socket The sending socket.
-     * \param to The address of the receiver.
+     * @brief Send a packet.
+     * @param socket The sending socket.
+     * @param to The address of the receiver.
      */
     void DoSendData(Ptr<Socket> socket, std::string to);
     /**
-     * \brief Send a packet.
-     * \param socket The sending socket.
-     * \param to The address of the receiver.
+     * @brief Send a packet.
+     * @param socket The sending socket.
+     * @param to The address of the receiver.
      */
     void SendData(Ptr<Socket> socket, std::string to);
 
@@ -1301,9 +1277,9 @@ Ipv4GlobalRoutingSlash32TestCase::DoRun()
 }
 
 /**
- * \ingroup internet-test
+ * @ingroup internet-test
  *
- * \brief IPv4 GlobalRouting TestSuite
+ * @brief IPv4 GlobalRouting TestSuite
  */
 class Ipv4GlobalRoutingTestSuite : public TestSuite
 {

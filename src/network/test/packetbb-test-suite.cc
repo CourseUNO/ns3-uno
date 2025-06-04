@@ -1,4 +1,3 @@
-/* vim: set ts=2 sw=2 sta expandtab ai si cin: */
 /*
  * Copyright (c) 2009 Drexel University
  *
@@ -19,20 +18,20 @@
 using namespace ns3;
 
 /**
- * \ingroup network-test
- * \ingroup tests
+ * @ingroup network-test
+ * @ingroup tests
  *
- * \brief PacketBb TestCase
+ * @brief PacketBb TestCase
  */
 class PbbTestCase : public TestCase
 {
   public:
     /**
      * Constructor
-     * \param name Test name.
-     * \param packet Packet to test.
-     * \param buffer Buffer to test.
-     * \param size Buffer size.
+     * @param name Test name.
+     * @param packet Packet to test.
+     * @param buffer Buffer to test.
+     * @param size Buffer size.
      */
     PbbTestCase(std::string name, Ptr<PbbPacket> packet, uint8_t* buffer, uint32_t size);
     ~PbbTestCase() override;
@@ -100,10 +99,10 @@ PbbTestCase::TestDeserialize()
 }
 
 /**
- * \ingroup network-test
- * \ingroup tests
+ * @ingroup network-test
+ * @ingroup tests
  *
- * \brief PacketBb TestSuite
+ * @brief PacketBb TestSuite
  */
 class PbbTestSuite : public TestSuite
 {

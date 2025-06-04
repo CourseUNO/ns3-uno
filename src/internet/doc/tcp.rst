@@ -124,8 +124,8 @@ Using the helper functions defined in ``src/applications/helper`` and
   Address sinkLocalAddress(InetSocketAddress(Ipv4Address::GetAny(), port));
   PacketSinkHelper sinkHelper("ns3::TcpSocketFactory", sinkLocalAddress);
   ApplicationContainer sinkApp = sinkHelper.Install(serverNode);
-  sinkApp.Start(Seconds(1.0));
-  sinkApp.Stop(Seconds(10.0));
+  sinkApp.Start(Seconds(1));
+  sinkApp.Stop(Seconds(10));
 
 Similarly, the below snippet configures OnOffApplication traffic source to use
 TCP::
@@ -1005,7 +1005,7 @@ The following unit tests have been written to validate the implementation of DCT
 
 * ECT flags should be set for SYN, SYN+ACK, ACK and data packets for DCTCP traffic
 * ECT flags should not be set for SYN, SYN+ACK and pure ACK packets, but should be set on data packets for ECN enabled traditional TCP flows
-* ECE should be set only when CE flags are received at receiver and even if sender doesn’t send CWR, receiver should not send ECE if it doesn’t receive packets with CE flags
+* ECE should be set only when CE flags are received at receiver and even if sender doesn't send CWR, receiver should not send ECE if it doesn't receive packets with CE flags
 
 An example program, ``examples/tcp/tcp-validation.cc``, can be used to
 experiment with DCTCP for long-running flows with different bottleneck
@@ -1124,6 +1124,36 @@ For an academic peer-reviewed paper on the BBR implementation in ns-3,
 please refer to:
 
 * Vivek Jain, Viyom Mittal and Mohit P. Tahiliani. "Design and Implementation of TCP BBR in ns-3." In Proceedings of the 10th Workshop on ns-3, pp. 16-22. 2018. (https://dl.acm.org/doi/abs/10.1145/3199902.3199911)
+
+Integration with TcpRateOps
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the older version of the TCP BBR algorithm, the ``appLimited`` variable was handled directly inside the ``TcpBbr`` class. To make the code more modular and similar to how things are done in Linux TCP, a pointer to the ``TcpRateOps`` class called ``Ptr<TcpRateOps> m_rateOps`` was introduced. This change helps manage the ``appLimited`` state through the rate operations interface instead of directly in ``TcpBbr``.
+
+Now, the ``appLimited`` value can be accessed with:
+
+.. code-block:: cpp
+
+    m_rateOps->GetConnectionRate().m_appLimited;
+
+And it can be updated using:
+
+.. code-block:: cpp
+
+    m_rateOps->SetAppLimited(tcb->m_bytesInFlight.Get());
+
+The ``SetAppLimited`` function, which is part of the ``TcpRateLinux`` class, takes care of updating the ``appLimited`` value based on the current amount of data in flight.
+
+Here's an example of the ``SetRateOps`` method in ``TcpBbr``:
+
+.. code-block:: cpp
+
+    void TcpBbr::SetRateOps(Ptr<TcpRateOps> rateOps)
+    {
+        m_rateOps = rateOps;
+    }
+
+This setup makes the code more organized and reflects how Linux TCP handles the ``appLimited`` state, where it's managed within the TCP socket and updated by rate operations.
 
 Support for Explicit Congestion Notification (ECN)
 ++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1855,7 +1885,7 @@ the method ConfigureEnvironment:
       TcpGeneralTest::ConfigureEnvironment();
       SetAppPktCount(20);
       SetMTU(500);
-      SetTransmitStart(Seconds(2.0));
+      SetTransmitStart(Seconds(2));
       SetPropagationDelay(MilliSeconds(50));
   }
 
@@ -1901,7 +1931,7 @@ following code):
        Ptr<TcpSocketMsgBase> socket = TcpGeneralTest::CreateReceiverSocket(node);
 
        socket->SetAttribute("RcvBufSize", UintegerValue(0));
-       Simulator::Schedule(Seconds(10.0),
+       Simulator::Schedule(Seconds(10),
                          &TcpZeroWindowTest::IncreaseBufSize, this);
 
        return socket;

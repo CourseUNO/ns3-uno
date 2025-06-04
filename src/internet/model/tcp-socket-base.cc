@@ -58,7 +58,7 @@ namespace
 {
 
 /**
- * \brief map TcpPacketType and EcnMode to boolean value to check whether ECN-marking is allowed or
+ * @brief map TcpPacketType and EcnMode to boolean value to check whether ECN-marking is allowed or
  * not
  */
 const std::map<std::pair<ns3::TcpSocketBase::TcpPacketType_t, ns3::TcpSocketState::EcnMode_t>, bool>
@@ -142,7 +142,7 @@ TcpSocketBase::GetTypeId()
             .AddAttribute(
                 "MinRto",
                 "Minimum retransmit timeout value",
-                TimeValue(Seconds(1.0)), // RFC 6298 says min RTO=1 sec, but Linux uses 200ms.
+                TimeValue(Seconds(1)), // RFC 6298 says min RTO=1 sec, but Linux uses 200ms.
                 // See http://www.postel.org/pipermail/end2end-interest/2004-November/004402.html
                 MakeTimeAccessor(&TcpSocketBase::SetMinRto, &TcpSocketBase::GetMinRto),
                 MakeTimeChecker())
@@ -289,12 +289,6 @@ TcpSocketBase::GetTypeId()
     return tid;
 }
 
-TypeId
-TcpSocketBase::GetInstanceTypeId() const
-{
-    return TcpSocketBase::GetTypeId();
-}
-
 TcpSocketBase::TcpSocketBase()
     : TcpSocket()
 {
@@ -435,10 +429,13 @@ TcpSocketBase::TcpSocketBase(const TcpSocketBase& sock)
     m_tcb->m_pacingRate = m_tcb->m_maxPacingRate;
     m_pacingTimer.SetFunction(&TcpSocketBase::NotifyPacingPerformed, this);
 
+    m_rateOps = CreateObject<TcpRateLinux>();
+
     if (sock.m_congestionControl)
     {
         m_congestionControl = sock.m_congestionControl->Fork();
         m_congestionControl->Init(m_tcb);
+        m_congestionControl->SetRateOps(m_rateOps);
     }
 
     if (sock.m_recoveryOps)
@@ -446,7 +443,6 @@ TcpSocketBase::TcpSocketBase(const TcpSocketBase& sock)
         m_recoveryOps = sock.m_recoveryOps->Fork();
     }
 
-    m_rateOps = CreateObject<TcpRateLinux>();
     if (m_tcb->m_sendEmptyPacketCallback.IsNull())
     {
         m_tcb->m_sendEmptyPacketCallback = MakeCallback(&TcpSocketBase::SendEmptyPacket, this);
@@ -808,7 +804,7 @@ int
 TcpSocketBase::Close()
 {
     NS_LOG_FUNCTION(this);
-    /// \internal
+    /// @internal
     /// First we check to see if there is any unread rx data.
     /// \bugid{426} claims we should send reset in this case.
     if (m_tcb->m_rxBuffer->Size() != 0)
@@ -1553,7 +1549,7 @@ TcpSocketBase::ProcessEstablished(Ptr<Packet> packet, const TcpHeader& tcpHeader
             NS_LOG_WARN("Ignored ack of " << tcpHeader.GetAckNumber()
                                           << " HighTxMark = " << m_tcb->m_highTxMark);
 
-            // Receiver sets ECE flags when it receives a packet with CE bit on or sender hasn’t
+            // Receiver sets ECE flags when it receives a packet with CE bit on or sender hasn't
             // responded to ECN echo sent by receiver
             if (m_tcb->m_ecnState == TcpSocketState::ECN_CE_RCVD ||
                 m_tcb->m_ecnState == TcpSocketState::ECN_SENDING_ECE)
@@ -2255,9 +2251,9 @@ TcpSocketBase::ProcessAck(const SequenceNumber32& ackNumber,
 
                 m_tcb->m_cWndInfl = m_tcb->m_cWnd;
 
-                NS_LOG_LOGIC("Congestion control called: "
-                             << " cWnd: " << m_tcb->m_cWnd << " ssTh: " << m_tcb->m_ssThresh
-                             << " segsAcked: " << segsAcked);
+                NS_LOG_LOGIC("Congestion control called: cWnd: " << m_tcb->m_cWnd
+                                                                 << " ssTh: " << m_tcb->m_ssThresh
+                                                                 << " segsAcked: " << segsAcked);
 
                 NewAck(ackNumber, true);
             }
@@ -2789,7 +2785,7 @@ TcpSocketBase::SendEmptyPacket(uint8_t flags)
     Ptr<Packet> p = Create<Packet>();
     TcpHeader header;
     SequenceNumber32 s = m_tcb->m_nextTxSequence;
-    TcpPacketType_t packetType;
+    TcpPacketType_t packetType = INVALID;
 
     if (flags & TcpHeader::FIN)
     {
@@ -2801,26 +2797,25 @@ TcpSocketBase::SendEmptyPacket(uint8_t flags)
         ++s;
     }
 
-    if (flags == TcpHeader::ACK)
+    if (flags & TcpHeader::SYN)
     {
-        packetType = TcpPacketType_t::PURE_ACK;
-    }
-    else if (flags == TcpHeader::RST)
-    {
-        packetType = TcpPacketType_t::RST;
-    }
-    else if (flags & TcpHeader::SYN)
-    {
+        packetType = TcpPacketType_t::SYN;
         if (flags & TcpHeader::ACK)
         {
             packetType = TcpPacketType_t::SYN_ACK;
         }
-        else
-        {
-            packetType = TcpPacketType_t::SYN;
-        }
+    }
+    else if (flags & TcpHeader::ACK)
+    {
+        packetType = TcpPacketType_t::PURE_ACK;
     }
 
+    if (flags & TcpHeader::RST)
+    {
+        packetType = TcpPacketType_t::RST;
+    }
+
+    NS_ASSERT_MSG(packetType != TcpPacketType_t::INVALID, "Invalid TCP packet type");
     AddSocketTags(p, IsEct(packetType));
 
     header.SetFlags(flags);
@@ -4664,6 +4659,7 @@ TcpSocketBase::SetCongestionControlAlgorithm(Ptr<TcpCongestionOps> algo)
     NS_LOG_FUNCTION(this << algo);
     m_congestionControl = algo;
     m_congestionControl->Init(m_tcb);
+    m_congestionControl->SetRateOps(m_rateOps);
 }
 
 void
@@ -4791,7 +4787,7 @@ bool
 TcpSocketBase::IsEct(TcpPacketType_t packetType) const
 {
     NS_LOG_FUNCTION(this << packetType);
-
+    NS_ASSERT_MSG(packetType != TcpPacketType_t::INVALID, "Invalid TCP packet type");
     if (m_tcb->m_ecnState == TcpSocketState::ECN_DISABLED)
     {
         return false;

@@ -12,11 +12,11 @@
 #include "lte-amc.h"
 #include "lte-vendor-specific-parameters.h"
 
-#include <ns3/boolean.h>
-#include <ns3/log.h>
-#include <ns3/math.h>
-#include <ns3/pointer.h>
-#include <ns3/simulator.h>
+#include "ns3/boolean.h"
+#include "ns3/log.h"
+#include "ns3/math.h"
+#include "ns3/pointer.h"
+#include "ns3/simulator.h"
 
 #include <cfloat>
 #include <set>
@@ -26,13 +26,13 @@ namespace ns3
 
 NS_LOG_COMPONENT_DEFINE("TdBetFfMacScheduler");
 
-/// TDBET type 0 allocation RBG
+/// TDBET type 0 allocation RBG (see table 7.1.6.1-1 of 36.213)
 static const int TdBetType0AllocationRbg[4] = {
     10,  // RBG size 1
     26,  // RBG size 2
     63,  // RBG size 3
     110, // RBG size 4
-};       // see table 7.1.6.1-1 of 36.213
+};
 
 NS_OBJECT_ENSURE_REGISTERED(TdBetFfMacScheduler);
 
@@ -904,7 +904,7 @@ TdBetFfMacScheduler::DoSchedDlTriggerReq(
             metricMax = metric;
             itMax = it;
         }
-    } // end for m_flowStatsDl
+    }
 
     if (itMax == m_flowStatsDl.end())
     {
@@ -1070,7 +1070,7 @@ TdBetFfMacScheduler::DoSchedDlTriggerReq(
         }
 
         itMap++;
-    }                               // end while allocation
+    }
     ret.m_nrOfPdcchOfdmSymbols = 1; /// \todo check correct value according the DCIs txed
 
     // update UEs stats

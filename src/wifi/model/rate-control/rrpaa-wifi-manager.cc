@@ -149,8 +149,8 @@ RrpaaWifiManager::SetupPhy(const Ptr<WifiPhy> phy)
         txVector.SetMode(mode);
         txVector.SetPreambleType(WIFI_PREAMBLE_LONG);
         /* Calculate the TX Time of the Data and the corresponding Ack */
-        Time dataTxTime = phy->CalculateTxDuration(m_frameLength, txVector, phy->GetPhyBand());
-        Time ackTxTime = phy->CalculateTxDuration(m_ackLength, txVector, phy->GetPhyBand());
+        Time dataTxTime = WifiPhy::CalculateTxDuration(m_frameLength, txVector, phy->GetPhyBand());
+        Time ackTxTime = WifiPhy::CalculateTxDuration(m_ackLength, txVector, phy->GetPhyBand());
         NS_LOG_DEBUG("Calculating TX times: Mode= " << mode << " DataTxTime= " << dataTxTime
                                                     << " AckTxTime= " << ackTxTime);
         AddCalcTxTime(mode, dataTxTime + ackTxTime);
@@ -252,7 +252,7 @@ RrpaaWifiManager::CheckInit(RrpaaWifiRemoteStation* station)
         WifiMode mode = GetSupported(station, 0);
         auto channelWidth = GetChannelWidth(station);
         DataRate rate(mode.GetDataRate(channelWidth));
-        const auto power = GetPhy()->GetPowerDbm(station->m_powerLevel);
+        const auto power = GetPhy()->GetPower(station->m_powerLevel);
         m_rateChange(rate, rate, station->m_state->m_address);
         m_powerChange(power, power, station->m_state->m_address);
 
@@ -391,16 +391,16 @@ RrpaaWifiManager::DoGetDataTxVector(WifiRemoteStation* st, MHz_u allowedWidth)
     NS_LOG_FUNCTION(this << st << allowedWidth);
     auto station = static_cast<RrpaaWifiRemoteStation*>(st);
     auto channelWidth = GetChannelWidth(station);
-    if (channelWidth > 20 && channelWidth != 22)
+    if (channelWidth > MHz_u{20} && channelWidth != MHz_u{22})
     {
-        channelWidth = 20;
+        channelWidth = MHz_u{20};
     }
     CheckInit(station);
     WifiMode mode = GetSupported(station, station->m_rateIndex);
     DataRate rate(mode.GetDataRate(channelWidth));
     DataRate prevRate(GetSupported(station, station->m_prevRateIndex).GetDataRate(channelWidth));
-    const auto power = GetPhy()->GetPowerDbm(station->m_powerLevel);
-    const auto prevPower = GetPhy()->GetPowerDbm(station->m_prevPowerLevel);
+    const auto power = GetPhy()->GetPower(station->m_powerLevel);
+    const auto prevPower = GetPhy()->GetPower(station->m_prevPowerLevel);
     if (station->m_prevRateIndex != station->m_rateIndex)
     {
         m_rateChange(prevRate, rate, station->m_state->m_address);
@@ -429,9 +429,9 @@ RrpaaWifiManager::DoGetRtsTxVector(WifiRemoteStation* st)
     NS_LOG_FUNCTION(this << st);
     auto station = static_cast<RrpaaWifiRemoteStation*>(st);
     auto channelWidth = GetChannelWidth(station);
-    if (channelWidth > 20 && channelWidth != 22)
+    if (channelWidth > MHz_u{20} && channelWidth != MHz_u{22})
     {
-        channelWidth = 20;
+        channelWidth = MHz_u{20};
     }
     WifiMode mode;
     if (!GetUseNonErpProtection())

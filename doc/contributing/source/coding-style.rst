@@ -43,10 +43,11 @@ previous versions.
 The following list contains the set of clang-format versions that are verified
 to produce consistent output among themselves.
 
+* clang-format-19
+* clang-format-18
 * clang-format-17
 * clang-format-16
 * clang-format-15
-* clang-format-14
 
 Integration with IDEs
 =====================
@@ -150,15 +151,48 @@ source code files. Additionally, it performs other manual checks and fixes in te
 We recommend running this script over your newly introduced C++ files prior to submission
 as a Merge Request.
 
-The script has multiple modes of operation. By default, the script checks if
-source code files are well formatted, if there are no #include headers from the same
-module with the "ns3/" prefix, and text files do not have trailing whitespace
-nor tabs. The process returns a zero exit code if all files adhere to these rules.
+The script performs multiple style checks. It returns a zero exit code if all files adhere to these rules.
 If there are files that do not comply with the rules, the process returns a non-zero
 exit code and lists the respective files. This mode is useful for developers editing
 their code and for the GitLab CI/CD pipeline to check if the codebase is well formatted.
-All checks are enabled by default. Users can disable specific checks using the corresponding
-flags: ``--no-include-prefixes``, ``--no-formatting``, ``--no-whitespace`` and ``--no-tabs``.
+
+The script runs the checks explained in the following table.
+All checks are enabled by default.
+Users can disable specific checks using the corresponding flags.
+
+.. list-table::
+  :header-rows: 1
+
+  * - Check
+    - Description
+    - Flag to Disable Check
+  * - Formatting
+    - Check code formatting using clang-format. Respects clang-format guards.
+    - ``--no-formatting``
+  * - #include "ns3/" prefixes
+    - Check if local ``#include`` headers do not use the "ns3/" prefix. Respects clang-format guards.
+    - ``--no-include-prefixes``
+  * - #include quotes
+    - Check if ns-3 ``#include`` headers use quotes (``""``) instead of angle brackets (``<>``). Respects clang-format guards.
+    - ``--no-include-quotes``
+  * - Doxygen tags
+    - Check if Doxygen tags use ``@`` rather than ``\\``. Respects clang-format guards.
+    - ``--no-doxygen-tags``
+  * - SPDX Licenses
+    - Check if source code use SPDX licenses rather than GPL license text. Respects clang-format guards.
+    - ``--no-licenses``
+  * - Emacs comments
+    - Check if source code does not have emacs file style comments. Respects clang-format guards.
+    - ``--no-emacs``
+  * - Trailing whitespace
+    - Check if there are no trailing whitespace. Always checked.
+    - ``--no-whitespace``
+  * - Tabs
+    - Check if there are no tabs. Respects clang-format guards.
+    - ``--no-tabs``
+  * - File encoding
+    - Check if files have the correct encoding (UTF-8). Always checked.
+    - ``--no-encoding``
 
 Additional information about the formatting issues detected by the script can be enabled
 by adding the ``-v, --verbose`` flag.
@@ -221,9 +255,10 @@ Therefore, it is recommended to use the latest version available.
 
 To ensure consistency among developers, |ns3| defines a minimum version of clang-tidy,
 whose warnings must not be ignored. Therefore, developers should, at least, scan their
-code with the minimum version of clang-tidy.
+code with the minimum version of clang-tidy. However, more recent versions can be used,
+which will produce better warnings.
 
-The minimum version is clang-tidy-14.
+The minimum version is clang-tidy-15.
 
 Integration with IDEs
 =====================
@@ -670,7 +705,7 @@ is described in the `Doxygen website <https://www.doxygen.nl/index.html>`_.
   {
 
   /**
-   * \brief short one-line description of the purpose of your class
+   * @brief short one-line description of the purpose of your class
    *
    * A longer description of the purpose of your class after a blank
    * empty line.
@@ -683,8 +718,8 @@ is described in the `Doxygen website <https://www.doxygen.nl/index.html>`_.
       /**
        * A detailed description of the purpose of the method.
        *
-       * \param firstParam a short description of the purpose of this parameter
-       * \return a short description of what is returned from this function.
+       * @param firstParam a short description of the purpose of this parameter
+       * @return a short description of what is returned from this function.
        */
       int DoSomething(int firstParam);
 
@@ -760,7 +795,7 @@ For standard headers, use the C++ style of inclusion:
 
   .. sourcecode:: cpp
 
-    #include <ns3/header.h>
+    #include "ns3/header.h"
 
 - inside .cc files, use
 
@@ -772,7 +807,7 @@ For standard headers, use the C++ style of inclusion:
 
   .. sourcecode:: cpp
 
-    #include <ns3/header.h>
+    #include "ns3/header.h"
 
 Variables and constants
 =======================
@@ -821,7 +856,6 @@ file (``*.cc``).
 When declaring variables that are easily deducible from context, prefer to declare them
 with ``auto`` instead of repeating the type name. Not only does this improve code readability,
 by making lines shorter, but it also facilitates future code refactoring.
-When declaring variables, prefer to use direct-initialization, to avoid repeating the type name.
 
 .. sourcecode:: cpp
 
@@ -835,11 +869,73 @@ When declaring variables, prefer to use direct-initialization, to avoid repeatin
   auto* ptr = new int[10];
   auto m = static_cast<uint8_t>(97 + (i % 26));
 
+
+Initialization
+==============
+
+When declaring variables, prefer to use direct-initialization, to avoid repeating the type name.
+
+.. sourcecode:: cpp
+
   // Avoid splitting the declaration and initialization of variables
   Ipv4Address ipv4Address = Ipv4Address("192.168.0.1")
 
   // Prefer to use direct-initialization
   Ipv4Address ipv4Address("192.168.0.1")
+
+Variables with no default constructor or of primitive types should be initialized when declared.
+
+Variables with default constructors do not need to be explicitly initialized, since the compiler
+already does that. An example of this is the ``ns3::Time`` class, which will initialize to zero.
+
+Member variables of structs and classes should be initialized unless the member has a default
+constructor that guarantees initialization.  Preferably, variables should be initialized together
+with the declaration (in the header file). Alternatively, they can be initialized in the default
+constructor (in the implementation file), and you may see instances of this in the codebase, but
+direct initialization upon declaration is preferred going forward.
+
+If all member variables of a class / struct are directly initialized (see above), they do not
+require explicit default initialization. But if not all variables are initialized, those
+non-initialized variables will contain garbage. Therefore, initializing the class object with
+``{}`` allows all member variables to always be initialized -- either with the provided default
+initialization or with the primitive type's default value (typically 0).
+
+C++ supports two syntax choices for direct initialization, either ``()`` or ``{}``.  There are
+various tradeoffs in the choices for more complicated types (consult the C++ literature on
+brace vs. parentheses initialization), but for the fundamental types like ``double``, either is
+acceptable (please use consistently within files).
+
+Regarding ``ns3::Time``, do not initialize to non-zero integer values as follows, assuming
+that it will be converted to nanoseconds:
+
+.. sourcecode:: cpp
+
+  Time t{1000000};  // This is disallowed
+
+The value will be interpreted according to the current resolution, which is ambiguous.  A
+user's program may have already changed the resolution from the default of nanoseconds to
+something else by the time of this initialization, and it will be instead interpreted according
+to 10^6 * the new resolution unit.
+
+Time initialization to raw floating-point values is additionally fraught, because of rounding.  Doing
+so with small values has led to bugs in practice such as timer timeout values of zero time.
+
+When declaring or manipulating ``Time`` objects with known values, prefer to use integer-based representations and
+arguments over floating-point fractions, where possible, because integer-based is faster.
+This means preferring the use of ``NanoSeconds``, ``MicroSeconds``, and ``MilliSeconds`` over
+``Seconds``.  For example, to represent a tenth of a second, prefer ``MilliSeconds(100)``
+to ``Seconds(0.1)``.
+
+To summarize Time declaration and initialization, consider the following examples and comments:
+
+.. sourcecode:: cpp
+
+  Time t;  // OK, will be value-initialized to integer zero
+  Time t{MilliSeconds(100)};  // OK, fastest, no floating point involved
+  Time t{"100ms"}; // OK, will perform a string conversion; integer would be faster
+  Time t{Seconds(0.1)};  // OK, will invoke Seconds(double); integer would be faster
+  Time t{100000000}; // NOT OK, is interpreted differently when ``Time::SetResolution()`` called
+  Time t{0.1}; // NOT OK, will round to zero; see above and also merge request !2007
 
 Comments
 ========
@@ -851,9 +947,10 @@ Doxygen comments should use the C-style comment (also known as Javadoc) style.
 For comments that are intended to not be exposed publicly in the Doxygen output,
 use the ``@internal`` and ``@endinternal`` tags.
 Please use the ``@see`` tag for cross-referencing.
-All parameters and return values should be documented. The |ns3| codebase uses
-both the ``@`` or ``\`` characters for tag identification; please make sure
-that usage is consistent within a file.
+All parameters and return values should be documented. The |ns3| codebase prefers
+the ``@`` character for tag identification. This character is recognized by clang-format
+as the start of Doxygen tags, which enables it to keep tags properly formatted;
+therefore please don't use ``\`` as the delimiter.
 
 .. sourcecode:: cpp
 
@@ -865,7 +962,7 @@ that usage is consistent within a file.
       /**
        * Constructor.
        *
-       * \param n Number of elements.
+       * @param n Number of elements.
        */
       MyClass(int n);
   };
@@ -880,11 +977,11 @@ classes (e.g., all the classes in a module). E.g.;
 .. sourcecode:: cpp
 
   /**
-   * \defgroup mynewmodule This is a new module
+   * @defgroup mynewmodule This is a new module
    */
 
   /**
-   * \ingroup mynewmodule
+   * @ingroup mynewmodule
    *
    * MyClassOne description.
    */
@@ -893,7 +990,7 @@ classes (e.g., all the classes in a module). E.g.;
   };
 
   /**
-   * \ingroup mynewmodule
+   * @ingroup mynewmodule
    *
    * MyClassTwo description.
    */
@@ -906,22 +1003,22 @@ In the tests for the module, it is suggested to add an ancillary group:
 .. sourcecode:: cpp
 
   /**
-   * \defgroup mynewmodule-test Tests for new module
-   * \ingroup mynewmodule
-   * \ingroup tests
+   * @defgroup mynewmodule-test Tests for new module
+   * @ingroup mynewmodule
+   * @ingroup tests
    */
 
   /**
-   * \ingroup mynewmodule-tests
-   * \brief MyNewModule Test
+   * @ingroup mynewmodule-tests
+   * @brief MyNewModule Test
    */
   class MyNewModuleTest : public TestCase
   {
   };
 
   /**
-   * \ingroup mynewmodule-tests
-   * \brief MyNewModule TestSuite
+   * @ingroup mynewmodule-tests
+   * @brief MyNewModule TestSuite
    */
   class MyNewModuleTestSuite : public TestSuite
   {
@@ -930,7 +1027,7 @@ In the tests for the module, it is suggested to add an ancillary group:
   };
 
   /**
-   * \ingroup mynewmodule-tests
+   * @ingroup mynewmodule-tests
    * Static variable for test initialization
    */
   static MyNewModuleTestSuite g_myNewModuleTestSuite;
@@ -968,6 +1065,60 @@ the preceding lines.
 
   /// Node container with the Wi-Fi stations
   NodeContainer wifiStations(3);
+
+Comments in closing braces are generally discouraged, to allow for consistent style
+formatting across recent versions of clang-format (see MRs
+`!1899 <https://gitlab.com/nsnam/ns-3-dev/-/merge_requests/1899>`_ and
+`!2070 <https://gitlab.com/nsnam/ns-3-dev/-/merge_requests/2070>`_).
+This rule may be overridden in cases where the comment improves the code's readability.
+For example, in class declarations in files with multiple classes, classes within parent classes,
+and inline class functions.
+To ensure consistent style formatting, prefer placing the comment marking the end of the class
+in a new line before the brace.
+
+An exception to this rule are the comments in the closing brace of a namespace,
+which identifies the corresponding namespace.
+
+The following examples illustrate the above guidelines.
+
+.. sourcecode:: cpp
+
+  // File with only one class
+
+  namespace ns3
+  {
+
+  int
+  MyClass::Func(int x)
+  {
+      while (...)
+      {
+          if (...)
+          {
+          } // end if // Do not add this comment
+      } // end while  // Do not add this comment
+  } // end Func       // Do not add this comment
+
+  } // namespace ns3  // Keep this comment
+
+.. sourcecode:: cpp
+
+  // Example of file with multiple classes, and classes within classes
+
+  class MyClass
+  {
+      class InlineClass
+      {
+          ...
+          int var; //!< Some variable
+
+          // end of class InlineClass  // This comment is allowed
+      };
+
+      ...
+
+      // end of class MyClass  // This comment is allowed
+  };
 
 Casts
 =====
@@ -1058,8 +1209,8 @@ The general guidelines are as follows:
     /**
      * Receive packet from lower layer (passed to PHY as callback).
      *
-     * \param pkt Packet being received.
-     * \param txMode Mode of received packet.
+     * @param pkt Packet being received.
+     * @param txMode Mode of received packet.
      */
     void RxPacketGood(Ptr<Packet> pkt, double, UanTxMode txMode);
 
@@ -1361,6 +1512,16 @@ for more details.
 
 - Avoid declaring trivial destructors, to optimize performance.
 
+.. _When an empty destructor is required: https://andreasfertig.com/blog/2023/12/when-an-empty-destructor-is-required/
+
+- When declaring default destructors with ``~Class() = default;``, be aware
+  that classes derived from ``SimpleRefCount<T>`` must have this declaration
+  on the source file (``.cc``). The header file (``.h``) should contain
+  the plain destructor declaration ``~Class();``. This is due to PIMPL's
+  opaque pointer, as explained in Andrea Fertig's blog post
+  `When an empty destructor is required`_.
+  See class WifiPpdu's destructor for an example.
+
 C++ standard
 ============
 
@@ -1494,6 +1655,18 @@ Miscellaneous items
     {
         ...
     };
+
+- When checking whether a Time value is zero, use ``Time::IsZero()`` rather than comparing it to a zero-valued time object with ``operator==``, to avoid construction of a temporary.  Similar guidance applies to the related functions ``Time::IsPositive()``, ``Time::IsNegative()``, ``Time::IsStrictlyPositive``, and ``Time::IsStrictlyNegative()``.
+
+  .. sourcecode:: cpp
+
+    Time t = ...;
+    // prefer the below:
+    if (t.IsStrictlyPositive())
+    {...}
+    // to this alternative:
+    if (t > Seconds(0))
+    {...}
 
 Clang-tidy rules
 ================
@@ -1734,3 +1907,77 @@ add the following configuration to ``.vscode/settings.json``:
       "pyproject.toml",
     ],
   }
+
+Markdown Lint
+*************
+
+.. _Markdownlint: https://github.com/markdownlint/markdownlint
+.. _Markdownlint Rules: https://github.com/markdownlint/markdownlint/blob/main/docs/RULES.md
+.. _Markdownlint Configuration Style File: https://github.com/markdownlint/markdownlint/blob/main/docs/creating_styles.md
+.. _Markdownlint Docker Hub: https://hub.docker.com/r/markdownlint/markdownlint
+.. _Markdownlint Docker Instructions: https://github.com/markdownlint/markdownlint/tree/main/tools/docker
+.. _Markdownlint VS Code Extension: https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint
+
+|ns3| uses `Markdownlint`_ as a linter of Markdown files.
+This linter checks if Markdown files follow a set of defined rules, in order to encourage
+standardization and consistency of Markdown files across parsers.
+It also ensures that Markdown files are correctly interpreted and rendered.
+
+Markdownlint detects linting issues, but it can not fix them automatically.
+The issues must be fixed manually.
+
+Markdownlint configuration
+==========================
+
+Markdownlint's settings are saved in the file ``.mdl_style.rb``.
+This file is defined in `Markdownlint Configuration Style File`_, which explains how to
+customize the tool to enable / disable rules or customize its parameters.
+
+The list of Markdown rules supported by Markdownlint is available in `Markdownlint Rules`_.
+
+Install and Run Markdownlint
+============================
+
+Markdownlint is written in Ruby. To run Markdownlint, either use the official
+Markdownlint Docker image or install Ruby and Markdownlint.
+
+Run Markdownlint with Docker image
+##################################
+
+Markdownlint has an official Docker image in `Markdownlint Docker Hub`_ with the tool
+and all dependencies installed.
+The instructions to use the Docker image are available in `Markdownlint Docker Instructions`_.
+
+To run Markdownlint in a Docker container, use the following command:
+
+.. sourcecode:: console
+
+  docker run -v .:/data markdownlint/markdownlint -s .mdl_style.rb .
+
+Install and Run Markdownlint with Ruby
+######################################
+
+To install Markdownlint natively, you need to have Ruby installed in your system.
+Check the installation instructions in the Ruby's official documentation.
+
+After installing Ruby in your system, install Markdownlint using the following command:
+
+.. sourcecode:: console
+
+  gem install mdl
+
+To run Markdownlint and check Markdown files for linting issues, run Markdownlint
+using the following command:
+
+.. sourcecode:: console
+
+  mdl -s .mdl_style.rb .
+
+VS Code Extension
+=================
+
+For VS Code users, the `Markdownlint VS Code Extension`_ extension is available in the marketplace.
+This extension is inspired in `Markdownlint`_ and follows the same set of rules.
+
+The Markdownlint extension automatically analyzes files open in the editor and provides inline hints
+when issues are detected. It can automatically fix most issues related with formatting.

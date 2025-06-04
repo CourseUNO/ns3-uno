@@ -15,7 +15,7 @@ namespace ns3
 {
 
 /**
- * \ingroup wifi
+ * @ingroup wifi
  *
  * DefaultApEmlsrManager is the default AP EMLSR manager.
  */
@@ -23,8 +23,8 @@ class DefaultApEmlsrManager : public ApEmlsrManager
 {
   public:
     /**
-     * \brief Get the type ID.
-     * \return the object TypeId
+     * @brief Get the type ID.
+     * @return the object TypeId
      */
     static TypeId GetTypeId();
 
@@ -34,7 +34,8 @@ class DefaultApEmlsrManager : public ApEmlsrManager
     Time GetDelayOnTxPsduNotForEmlsr(Ptr<const WifiPsdu> psdu,
                                      const WifiTxVector& txVector,
                                      WifiPhyBand band) override;
-    bool UpdateCwAfterFailedIcf() override;
+    bool UpdateCwAfterFailedIcf() const override;
+    bool ReportFailedIcf() const override;
 };
 
 } // namespace ns3

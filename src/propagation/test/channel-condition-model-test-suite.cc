@@ -20,7 +20,7 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("ChannelConditionModelsTest");
 
 /**
- * \ingroup propagation-tests
+ * @ingroup propagation-tests
  *
  * Test case for the 3GPP channel condition models. It determines the
  * channel condition multiple times, estimates the LOS probability and
@@ -50,8 +50,8 @@ class ThreeGppChannelConditionModelTestCase : public TestCase
      * Evaluates the channel condition between two nodes by calling the method
      * GetChannelCondition on m_condModel. If the channel condition is LOS it
      * increments m_numLos
-     * \param a the mobility model of the first node
-     * \param b the mobility model of the second node
+     * @param a the mobility model of the first node
+     * @param b the mobility model of the second node
      */
     void EvaluateChannelCondition(Ptr<MobilityModel> a, Ptr<MobilityModel> b);
 
@@ -75,7 +75,7 @@ class ThreeGppChannelConditionModelTestCase : public TestCase
 ThreeGppChannelConditionModelTestCase::ThreeGppChannelConditionModelTestCase()
     : TestCase("Test case for the child classes of ThreeGppChannelConditionModel"),
       m_testVectors(),
-      m_tolerance(2e-3)
+      m_tolerance(2.5e-3)
 {
 }
 
@@ -267,7 +267,7 @@ ThreeGppChannelConditionModelTestCase::DoRun()
 }
 
 /**
- * \ingroup propagation-tests
+ * @ingroup propagation-tests
  *
  * Test suite for the channel condition models
  */

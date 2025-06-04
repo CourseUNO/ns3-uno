@@ -9,12 +9,12 @@
 #include "wifi-default-protection-manager.h"
 
 #include "ap-wifi-mac.h"
-#include "frame-exchange-manager.h"
 #include "sta-wifi-mac.h"
 #include "wifi-mpdu.h"
 #include "wifi-tx-parameters.h"
 
 #include "ns3/boolean.h"
+#include "ns3/eht-frame-exchange-manager.h"
 #include "ns3/emlsr-manager.h"
 #include "ns3/erp-ofdm-phy.h"
 #include "ns3/log.h"
@@ -48,6 +48,12 @@ WifiDefaultProtectionManager::GetTypeId()
                           "Initial Control Frame to an EMLSR client).",
                           BooleanValue(false),
                           MakeBooleanAccessor(&WifiDefaultProtectionManager::m_singleRtsPerTxop),
+                          MakeBooleanChecker())
+            .AddAttribute("SkipMuRtsBeforeBsrp",
+                          "If enabled, MU-RTS is not used to protect the transmission of a BSRP "
+                          "Trigger Frame.",
+                          BooleanValue(true),
+                          MakeBooleanAccessor(&WifiDefaultProtectionManager::m_skipMuRtsBeforeBsrp),
                           MakeBooleanChecker());
     return tid;
 }
@@ -206,8 +212,7 @@ WifiDefaultProtectionManager::GetPsduProtection(const WifiMacHeader& hdr,
     }
 
     // check if CTS-to-Self is needed
-    if (GetWifiRemoteStationManager()->GetUseNonErpProtection() &&
-        GetWifiRemoteStationManager()->NeedCtsToSelf(txParams.m_txVector))
+    if (GetWifiRemoteStationManager()->NeedCtsToSelf(txParams.m_txVector, hdr))
     {
         auto protection = std::make_unique<WifiCtsToSelfProtection>();
         protection->ctsTxVector = GetWifiRemoteStationManager()->GetCtsToSelfTxVector();
@@ -259,10 +264,9 @@ WifiDefaultProtectionManager::TryAddMpduToMuPpdu(Ptr<const WifiMpdu> mpdu,
     {
         // we get here if this is the first MPDU for this receiver.
         NS_ABORT_MSG_IF(m_mac->GetTypeOfStation() != AP, "HE APs only can send DL MU PPDUs");
-        auto apMac = StaticCast<ApWifiMac>(m_mac);
         auto modClass = txParams.m_txVector.GetModulationClass();
         auto txWidth = modClass == WIFI_MOD_CLASS_DSSS || modClass == WIFI_MOD_CLASS_HR_DSSS
-                           ? 20
+                           ? MHz_u{20}
                            : txParams.m_txVector.GetChannelWidth();
 
         if (protection != nullptr)
@@ -287,6 +291,24 @@ WifiDefaultProtectionManager::TryAddMpduToMuPpdu(Ptr<const WifiMpdu> mpdu,
             // PE Disambiguity, UL Spatial Reuse, Doppler and UL HE-SIG-A2 Reserved subfields in
             // the Common Info field are reserved. (Sec. 9.3.1.22.5 of 802.11ax)
             protection->muRts.SetType(TriggerFrameType::MU_RTS_TRIGGER);
+            /* 35.2.2.1 MU-RTS Trigger frame transmission (IEEE P802.11be/D7.0):
+             * If a non-AP EHT STA is addressed in an MU-RTS Trigger frame from an EHT AP and any of
+             * the following conditions is met, the User Info field addressed to an EHT STA in the
+             * MU-RTS Trigger frame shall be an EHT variant User Info field:
+             * - The bandwidth of the EHT MU PPDU or non-HT duplicate PPDU carrying the MU-RTS
+             * Trigger frame is 320 MHz.
+             * - The EHT MU PPDU or non-HT duplicate PPDU carrying the MU-RTS Trigger frame is
+             * punctured. Otherwise, the EHT AP may decide whether the User Info field in the MU-RTS
+             * Trigger frame is an HE variant User Info field or an EHT variant User Info field.
+             */
+            const auto& inactiveSubchannels = txParams.m_txVector.GetInactiveSubchannels();
+            const auto isPunctured =
+                std::find(inactiveSubchannels.cbegin(), inactiveSubchannels.cend(), true) !=
+                inactiveSubchannels.cend();
+            const auto muRtsVariant = ((txWidth == MHz_u{320}) || isPunctured)
+                                          ? TriggerFrameVariant::EHT
+                                          : TriggerFrameVariant::HE;
+            protection->muRts.SetVariant(muRtsVariant);
             protection->muRts.SetUlBandwidth(txWidth);
 
             // Add a User Info field for each of the receivers already in the TX params
@@ -310,12 +332,12 @@ WifiDefaultProtectionManager::TryAddMpduToMuPpdu(Ptr<const WifiMpdu> mpdu,
             }
         }
 
-        // The initial Control frame of frame exchanges shall be sent in the non-HT PPDU or
-        // non-HT duplicate PPDU format using a rate of 6 Mb/s, 12 Mb/s, or 24 Mb/s.
-        // (Sec. 35.3.17 of 802.11be D3.0)
         if (isEmlsrDestination && !isProtected)
         {
-            GetWifiRemoteStationManager()->AdjustTxVectorForIcf(protection->muRtsTxVector);
+            // This MU-RTS is an ICF for some EMLSR client
+            auto ehtFem =
+                StaticCast<EhtFrameExchangeManager>(m_mac->GetFrameExchangeManager(m_linkId));
+            ehtFem->SetIcfPaddingAndTxVector(protection->muRts, protection->muRtsTxVector);
         }
 
         return std::unique_ptr<WifiMuRtsCtsProtection>(protection);
@@ -347,6 +369,7 @@ WifiDefaultProtectionManager::TryUlMuTransmission(Ptr<const WifiMpdu> mpdu,
     // PE Disambiguity, UL Spatial Reuse, Doppler and UL HE-SIG-A2 Reserved subfields in
     // the Common Info field are reserved. (Sec. 9.3.1.22.5 of 802.11ax)
     protection->muRts.SetType(TriggerFrameType::MU_RTS_TRIGGER);
+    protection->muRts.SetVariant(trigger.GetVariant());
     protection->muRts.SetUlBandwidth(txWidth);
 
     NS_ABORT_MSG_IF(m_mac->GetTypeOfStation() != AP, "HE APs only can send DL MU PPDUs");
@@ -376,6 +399,10 @@ WifiDefaultProtectionManager::TryUlMuTransmission(Ptr<const WifiMpdu> mpdu,
         (m_sendMuRts && !allProtected && (!m_singleRtsPerTxop || protectedStas.empty())) ||
         isUnprotectedEmlsrDst;
 
+    // if we are sending a BSRP TF and SkipMuRtsBeforeBsrpTf is true, do not use MU-RTS (even in
+    // case of unprotected EMLSR, because the BSRP TF is an ICF)
+    needMuRts = needMuRts && (!m_skipMuRtsBeforeBsrp || !trigger.IsBsrp());
+
     if (!needMuRts)
     {
         // No protection needed
@@ -395,12 +422,11 @@ WifiDefaultProtectionManager::TryUlMuTransmission(Ptr<const WifiMpdu> mpdu,
     {
         protection->muRtsTxVector.SetMode(ErpOfdmPhy::GetErpOfdmRate6Mbps());
     }
-    // The initial Control frame of frame exchanges shall be sent in the non-HT PPDU or
-    // non-HT duplicate PPDU format using a rate of 6 Mb/s, 12 Mb/s, or 24 Mb/s.
-    // (Sec. 35.3.17 of 802.11be D3.0)
     if (isUnprotectedEmlsrDst)
     {
-        GetWifiRemoteStationManager()->AdjustTxVectorForIcf(protection->muRtsTxVector);
+        // This MU-RTS is an ICF for some EMLSR client
+        auto ehtFem = StaticCast<EhtFrameExchangeManager>(m_mac->GetFrameExchangeManager(m_linkId));
+        ehtFem->SetIcfPaddingAndTxVector(protection->muRts, protection->muRtsTxVector);
     }
 
     return protection;

@@ -39,7 +39,7 @@ RttEstimator::GetTypeId()
                             .SetGroupName("Internet")
                             .AddAttribute("InitialEstimation",
                                           "Initial RTT estimate",
-                                          TimeValue(Seconds(1.0)),
+                                          TimeValue(Seconds(1)),
                                           MakeTimeAccessor(&RttEstimator::m_initialEstimatedRtt),
                                           MakeTimeChecker());
     return tid;
@@ -85,12 +85,6 @@ RttEstimator::RttEstimator(const RttEstimator& c)
 RttEstimator::~RttEstimator()
 {
     NS_LOG_FUNCTION(this);
-}
-
-TypeId
-RttEstimator::GetInstanceTypeId() const
-{
-    return GetTypeId();
 }
 
 void
@@ -147,12 +141,6 @@ RttMeanDeviation::RttMeanDeviation(const RttMeanDeviation& c)
       m_beta(c.m_beta)
 {
     NS_LOG_FUNCTION(this);
-}
-
-TypeId
-RttMeanDeviation::GetInstanceTypeId() const
-{
-    return GetTypeId();
 }
 
 uint32_t

@@ -35,7 +35,7 @@ cpp_examples = [
         "True",
     ),
     (
-        "wifi-manager-example --wifiManager=Aarf --standard=802.11a --maxSlrc=1 --stepTime=0.1",
+        "wifi-manager-example --wifiManager=Aarf --standard=802.11a --maxRetryCount=1 --stepTime=0.1",
         "True",
         "True",
     ),
@@ -62,7 +62,7 @@ cpp_examples = [
         "True",
     ),
     (
-        "wifi-manager-example --wifiManager=Aarfcd --standard=802.11a --maxSlrc=1 --stepTime=0.1",
+        "wifi-manager-example --wifiManager=Aarfcd --standard=802.11a --maxRetryCount=1 --stepTime=0.1",
         "True",
         "True",
     ),
@@ -93,7 +93,7 @@ cpp_examples = [
         "True",
     ),
     (
-        "wifi-manager-example --wifiManager=Amrr --standard=802.11a --maxSlrc=1 --stepTime=0.1",
+        "wifi-manager-example --wifiManager=Amrr --standard=802.11a --maxRetryCount=1 --stepTime=0.1",
         "True",
         "True",
     ),
@@ -120,7 +120,7 @@ cpp_examples = [
         "True",
     ),
     (
-        "wifi-manager-example --wifiManager=Arf --standard=802.11a --maxSlrc=1 --stepTime=0.1",
+        "wifi-manager-example --wifiManager=Arf --standard=802.11a --maxRetryCount=1 --stepTime=0.1",
         "True",
         "True",
     ),
@@ -147,7 +147,7 @@ cpp_examples = [
         "True",
     ),
     (
-        "wifi-manager-example --wifiManager=Cara --standard=802.11a --maxSlrc=1 --stepTime=0.1",
+        "wifi-manager-example --wifiManager=Cara --standard=802.11a --maxRetryCount=1 --stepTime=0.1",
         "True",
         "True",
     ),
@@ -174,7 +174,7 @@ cpp_examples = [
         "True",
     ),
     (
-        "wifi-manager-example --wifiManager=Onoe --standard=802.11a --maxSlrc=1 --stepTime=0.1",
+        "wifi-manager-example --wifiManager=Onoe --standard=802.11a --maxRetryCount=1 --stepTime=0.1",
         "True",
         "True",
     ),
@@ -201,7 +201,7 @@ cpp_examples = [
         "True",
     ),
     (
-        "wifi-manager-example --wifiManager=Rraa --standard=802.11a --maxSlrc=1 --stepTime=0.1",
+        "wifi-manager-example --wifiManager=Rraa --standard=802.11a --maxRetryCount=1 --stepTime=0.1",
         "True",
         "True",
     ),
@@ -232,7 +232,7 @@ cpp_examples = [
         "True",
     ),
     (
-        "wifi-manager-example --wifiManager=Minstrel --standard=802.11a --maxSlrc=1 --stepTime=0.1",
+        "wifi-manager-example --wifiManager=Minstrel --standard=802.11a --maxRetryCount=1 --stepTime=0.1",
         "True",
         "True",
     ),
@@ -2137,6 +2137,16 @@ cpp_examples = [
         "wifi-manager-example --wifiManager=MinstrelHt --standard=802.11ax-6GHz --serverChannelWidth=160 --clientChannelWidth=160 --serverShortGuardInterval=3200 --clientShortGuardInterval=3200 --serverNss=4 --clientNss=4 --stepTime=0.1",
         "True",
         "False",
+    ),
+    (
+        "wifi-manager-example --wifiManager=MinstrelHt --standard=802.11be-6GHz --serverChannelWidth=320 --clientChannelWidth=320 --serverShortGuardInterval=1600 --clientShortGuardInterval=1600 --serverNss=1 --clientNss=1 --stepTime=0.1",
+        "True",
+        "True",
+    ),
+    (
+        "wifi-manager-example --wifiManager=Ideal --standard=802.11be-6GHz --serverChannelWidth=320 --clientChannelWidth=320 --serverShortGuardInterval=1600 --clientShortGuardInterval=1600 --serverNss=1 --clientNss=1 --stepTime=0.1",
+        "True",
+        "True",
     ),
     (
         "wifi-test-interference-helper --enableCapture=0 --txPowerA=5 --txPowerB=15 --delay=10us --txModeA=OfdmRate6Mbps --txModeB=OfdmRate6Mbps --checkResults=1 --expectRxASuccessful=0 --expectRxBSuccessful=0",

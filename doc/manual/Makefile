@@ -1,6 +1,6 @@
 EPSTOPDF = epstopdf
 DIA = dia
-CONVERT = convert
+CONVERT = convert -density 300
 
 SRC = ../../src
 # Temporary source directory, for build
@@ -92,6 +92,10 @@ SOURCEFIGS = \
 	figures/vtune-uarch-core-stats.png \
 	figures/vtune-uarch-profiling-summary.png \
 	figures/vtune-uarch-wifi-stats.png \
+	figures/perf.svg \
+	figures/perf-lte-frequency-reuse.png \
+	figures/perf-chunk-processor.png \
+	figures/perf-detail.png \
 	${SRC}/stats/doc/Stat-framework-arch.png \
 	${SRC}/stats/doc/Wifi-default.png \
 	${SRC}/stats/doc/dcf-overview.dia \

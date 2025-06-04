@@ -17,13 +17,13 @@
 #include "lte-amc.h"
 #include "lte-vendor-specific-parameters.h"
 
-#include <ns3/boolean.h>
-#include <ns3/integer.h>
-#include <ns3/log.h>
-#include <ns3/math.h>
-#include <ns3/pointer.h>
-#include <ns3/simulator.h>
-#include <ns3/string.h>
+#include "ns3/boolean.h"
+#include "ns3/integer.h"
+#include "ns3/log.h"
+#include "ns3/math.h"
+#include "ns3/pointer.h"
+#include "ns3/simulator.h"
+#include "ns3/string.h"
 
 #include <cfloat>
 #include <set>
@@ -34,13 +34,13 @@ namespace ns3
 
 NS_LOG_COMPONENT_DEFINE("CqaFfMacScheduler");
 
-/// CGA Type 0 Allocation
+/// CGA Type 0 Allocation (see table 7.1.6.1-1 of 36.213)
 static const int CqaType0AllocationRbg[4] = {
     10,  // RBG size 1
     26,  // RBG size 2
     63,  // RBG size 3
     110, // RBG size 4
-};       // see table 7.1.6.1-1 of 36.213
+};
 
 NS_OBJECT_ENSURE_REGISTERED(CqaFfMacScheduler);
 
@@ -53,9 +53,9 @@ struct qos_rb_and_CQI_assigned_to_lc
 
 /**
  * CQI value comparator function
- * \param key1 the first item
- * \param key2 the second item
- * \returns true if the first item is > the second item
+ * @param key1 the first item
+ * @param key2 the second item
+ * @returns true if the first item is > the second item
  */
 bool
 CQIValueDescComparator(uint8_t key1, uint8_t key2)
@@ -65,9 +65,9 @@ CQIValueDescComparator(uint8_t key1, uint8_t key2)
 
 /**
  * CGA group comparator function
- * \param key1 the first item
- * \param key2 the second item
- * \returns true if the first item is > the second item
+ * @param key1 the first item
+ * @param key2 the second item
+ * @returns true if the first item is > the second item
  */
 bool
 CqaGroupDescComparator(int key1, int key2)
@@ -107,9 +107,9 @@ typedef std::map<HOL_group, std::set<LteFlowId_t>>::iterator t_it_HOLgroupToUEs;
 
 /**
  * CQA key comparator
- * \param key1 the first item
- * \param key2 the second item
- * \returns true if the first item > the second item
+ * @param key1 the first item
+ * @param key2 the second item
+ * @returns true if the first item > the second item
  */
 bool
 CqaKeyDescComparator(uint16_t key1, uint16_t key2)
@@ -299,10 +299,10 @@ CqaFfMacScheduler::DoCschedLcConfigReq(
                 m_ueLogicalChannelsConfigList.find(flowid)->second = *lcit;
             }
         }
-
-    } // else new UE is added
+    }
     else
     {
+        // Add new UE
         for (auto lcit = params.m_logicalChannelConfigList.begin();
              lcit != params.m_logicalChannelConfigList.end();
              lcit++)
@@ -1257,8 +1257,8 @@ CqaFfMacScheduler::DoSchedDlTriggerReq(
                     }
                     sum += sbCqi;
                 }
-            } // end if cqi
-        }     // end of rbgNum
+            }
+        }
 
         sbCqiSum.insert(std::pair<uint16_t, uint8_t>((*itrbr).first.m_rnti, sum));
     }
@@ -1307,6 +1307,7 @@ CqaFfMacScheduler::DoSchedDlTriggerReq(
             break;
         }
 
+        // While there are more users in current group
         while (!availableRBGs.empty() && !itCurrentGroup->second.empty())
         {
             bool currentRBchecked = false;
@@ -1495,7 +1496,8 @@ CqaFfMacScheduler::DoSchedDlTriggerReq(
             }
 
             qos_rb_and_CQI_assigned_to_lc s;
-            s.cqi_value_for_lc = UeToCQIValue.find(userWithMaximumMetric)->second;
+            const auto ueToCqiIt = UeToCQIValue.find(userWithMaximumMetric);
+            s.cqi_value_for_lc = ueToCqiIt != UeToCQIValue.end() ? ueToCqiIt->second : 1;
             s.resource_block_index = currentRB;
 
             auto itMap = allocationMapPerRntiPerLCId.find(userWithMaximumMetric.m_rnti);
@@ -1527,9 +1529,8 @@ CqaFfMacScheduler::DoSchedDlTriggerReq(
             {
                 itCurrentGroup->second.erase(userWithMaximumMetric);
             }
-
-        } // while there are more users in current group
-    }     // while there are more groups of users
+        }
+    }
 
     // reset TTI stats of users
     for (auto itStats = m_flowStatsDl.begin(); itStats != m_flowStatsDl.end(); itStats++)
@@ -1675,7 +1676,7 @@ CqaFfMacScheduler::DoSchedDlTriggerReq(
         }
 
         itMap++;
-    }                               // end while allocation
+    }
     ret.m_nrOfPdcchOfdmSymbols = 1; // TODO: check correct value according the DCIs txed
 
     // update UEs stats

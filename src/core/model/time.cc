@@ -17,8 +17,8 @@
 #include <sstream>
 
 /**
- * \file
- * \ingroup time
+ * @file
+ * @ingroup time
  * ns3::Time, ns3::TimeWithUnit
  * and ns3::TimeValue attribute value implementations.
  */
@@ -42,8 +42,8 @@ const int32_t UNIT_COEFF[Time::LAST] = {315360, 864, 36, 6, 1, 1, 1, 1, 1, 1};
 
 /**
  * Scale a unit to the smallest unit.
- * \param u The unit to scale
- * \returns The value of \pname{u} in terms of the smallest defined unit.
+ * @param u The unit to scale
+ * @returns The value of \pname{u} in terms of the smallest defined unit.
  */
 long double
 Scale(Time::Unit u)
@@ -53,7 +53,7 @@ Scale(Time::Unit u)
 
 /**
  * Initializer for \c UNIT_VALUE
- * \returns The array of scale factors between units.
+ * @returns The array of scale factors between units.
  */
 long double*
 InitUnitValue()
@@ -285,7 +285,7 @@ void
 Time::ClearMarkedTimes()
 {
     /**
-     * \internal
+     * @internal
      *
      * We're called by Simulator::Run, which knows nothing about the mutex,
      * so we need a critical section here.
@@ -307,7 +307,7 @@ Time::ClearMarkedTimes()
         g_markingTimes->erase(g_markingTimes->begin(), g_markingTimes->end());
         g_markingTimes = nullptr;
     }
-} // Time::ClearMarkedTimes
+}
 
 // static
 void
@@ -330,7 +330,7 @@ Time::Mark(Time* const time)
             NS_LOG_WARN("already recorded " << time << "!");
         }
     }
-} // Time::Mark ()
+}
 
 // static
 void
@@ -358,7 +358,7 @@ Time::Clear(Time* const time)
             NS_LOG_LOGIC("\t[" << g_markingTimes->size() << "] removing  " << time);
         }
     }
-} // Time::Clear ()
+}
 
 // static
 void
@@ -389,8 +389,7 @@ Time::ConvertTimes(const Unit unit)
     NS_LOG_LOGIC("clearing MarkedTimes");
     g_markingTimes->erase(g_markingTimes->begin(), g_markingTimes->end());
     g_markingTimes = nullptr;
-
-} // Time::ConvertTimes ()
+}
 
 // static
 Time::Unit
@@ -558,8 +557,7 @@ MakeTimeChecker(const Time min, const Time max)
         {
             NS_LOG_FUNCTION_NOARGS();
             std::ostringstream oss;
-            oss << "Time"
-                << " " << m_minValue << ":" << m_maxValue;
+            oss << "Time " << m_minValue << ":" << m_maxValue;
             return oss.str();
         }
 

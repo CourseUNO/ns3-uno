@@ -90,7 +90,8 @@ WifiPhy::GetTypeId()
                 StringValue("{0, 0, BAND_UNSPECIFIED, 0}"),
                 MakeAttributeContainerAccessor<
                     TupleValue<UintegerValue, UintegerValue, EnumValue<WifiPhyBand>, UintegerValue>,
-                    ';'>((void(WifiPhy::*)(const ChannelSegments&)) & WifiPhy::SetOperatingChannel),
+                    ';'>(static_cast<void (WifiPhy::*)(const ChannelSegments&)>(
+                    &WifiPhy::SetOperatingChannel)),
                 MakeAttributeContainerChecker<
                     TupleValue<UintegerValue, UintegerValue, EnumValue<WifiPhyBand>, UintegerValue>,
                     ';'>(MakeTupleChecker<UintegerValue,
@@ -98,7 +99,7 @@ WifiPhy::GetTypeId()
                                           EnumValue<WifiPhyBand>,
                                           UintegerValue>(
                     MakeUintegerChecker<uint8_t>(0, 233),
-                    MakeUintegerChecker<MHz_u>(0, 160),
+                    MakeUintegerChecker<MHz_u>(0, 320),
                     MakeEnumChecker(WifiPhyBand::WIFI_PHY_BAND_2_4GHZ,
                                     "BAND_2_4GHZ",
                                     WifiPhyBand::WIFI_PHY_BAND_5GHZ,
@@ -107,7 +108,7 @@ WifiPhy::GetTypeId()
                                     "BAND_6GHZ",
                                     WifiPhyBand::WIFI_PHY_BAND_UNSPECIFIED,
                                     "BAND_UNSPECIFIED"),
-                    MakeUintegerChecker<uint8_t>(0, 7))))
+                    MakeUintegerChecker<uint8_t>(0, 15))))
             .AddAttribute("Frequency",
                           "The center frequency (MHz) of the current operating channel.",
                           TypeId::ATTR_GET,
@@ -122,12 +123,13 @@ WifiPhy::GetTypeId()
                           MakeUintegerChecker<uint8_t>(0, 233))
             .AddAttribute(
                 "ChannelWidth",
-                "The width in MHz of the current operating channel (5, 10, 20, 22, 40, 80 or 160). "
-                "If 80+80MHz is used, this corresponds to the total channel width, hence 160 MHz.",
+                "The width in MHz of the current operating channel (5, 10, 20, 22, 40, 80, 160 or "
+                "320). If 80+80MHz is used, this corresponds to the total channel width, hence 160 "
+                "MHz.",
                 TypeId::ATTR_GET,
                 UintegerValue(0),
                 MakeUintegerAccessor(&WifiPhy::GetChannelWidth),
-                MakeUintegerChecker<MHz_u>(5, 160))
+                MakeUintegerChecker<MHz_u>(5, 320))
             .AddAttribute(
                 "Primary20MHzIndex",
                 "The index of the primary 20 MHz channel within the current operating channel "
@@ -140,6 +142,15 @@ WifiPhy::GetTypeId()
                           BooleanValue(false),
                           MakeBooleanAccessor(&WifiPhy::SetFixedPhyBand, &WifiPhy::HasFixedPhyBand),
                           MakeBooleanChecker())
+            .AddAttribute(
+                "MaxRadioBw",
+                "The maximum width supported by the radio. It is not possible to configure an "
+                "operating channel with a total width larger than this value. A value of 0 means "
+                "no restriction.",
+                TypeId::ATTR_GET | TypeId::ATTR_CONSTRUCT, // prevent setting after construction
+                DoubleValue(MHz_u{0}),
+                MakeDoubleAccessor(&WifiPhy::m_maxRadioBw),
+                MakeDoubleChecker<MHz_u>())
             .AddAttribute(
                 "RxSensitivity",
                 "The energy of a received signal should be higher than "
@@ -299,16 +310,22 @@ WifiPhy::GetTypeId()
                           BooleanValue(false),
                           MakeBooleanAccessor(&WifiPhy::m_notifyRxMacHeaderEnd),
                           MakeBooleanChecker())
-            .AddTraceSource("PhyTxBegin",
-                            "Trace source indicating a packet "
-                            "has begun transmitting over the channel medium",
-                            MakeTraceSourceAccessor(&WifiPhy::m_phyTxBeginTrace),
-                            "ns3::WifiPhy::PhyTxBeginTracedCallback")
-            .AddTraceSource("PhyTxPsduBegin",
-                            "Trace source indicating a PSDU "
-                            "has begun transmitting over the channel medium",
-                            MakeTraceSourceAccessor(&WifiPhy::m_phyTxPsduBeginTrace),
-                            "ns3::WifiPhy::PsduTxBeginCallback")
+            .AddTraceSource(
+                "PhyTxBegin",
+                "Trace source indicating a packet has begun transmitting over the medium; "
+                "the packet holds a single MPDU even if the MPDU is transmitted within an A-MPDU "
+                "(in which case this trace fires for each MPDU in the "
+                "A-MPDU).",
+                MakeTraceSourceAccessor(&WifiPhy::m_phyTxBeginTrace),
+                "ns3::WifiPhy::PhyTxBeginTracedCallback")
+            .AddTraceSource(
+                "PhyTxPsduBegin",
+                "Trace source indicating a PSDU has begun transmitting over the channel medium; "
+                "this trace returns a WifiConstPsduMap with a single element (in the case of SU "
+                "PPDU) "
+                "or multiple elements (in the case of MU PPDU)",
+                MakeTraceSourceAccessor(&WifiPhy::m_phyTxPsduBeginTrace),
+                "ns3::WifiPhy::PsduTxBeginCallback")
             .AddTraceSource("PhyTxEnd",
                             "Trace source indicating a packet "
                             "has been completely transmitted over the channel.",
@@ -345,7 +362,7 @@ WifiPhy::GetTypeId()
                             "Trace source indicating a packet "
                             "has been dropped by the device during reception",
                             MakeTraceSourceAccessor(&WifiPhy::m_phyRxDropTrace),
-                            "ns3::Packet::TracedCallback")
+                            "ns3::WifiPhy::PhyRxDropTracedCallback")
             .AddTraceSource("PhyRxPpduDrop",
                             "Trace source indicating a ppdu "
                             "has been dropped by the device during reception",
@@ -379,17 +396,15 @@ WifiPhy::WifiPhy()
       m_standard(WIFI_STANDARD_UNSPECIFIED),
       m_maxModClassSupported(WIFI_MOD_CLASS_UNKNOWN),
       m_band(WIFI_PHY_BAND_UNSPECIFIED),
-      m_sifs(Seconds(0)),
-      m_slot(Seconds(0)),
-      m_pifs(Seconds(0)),
-      m_ackTxTime(Seconds(0)),
-      m_blockAckTxTime(Seconds(0)),
+      m_sifs(),
+      m_slot(),
+      m_pifs(),
       m_powerRestricted(false),
       m_channelAccessRequested(false),
       m_txSpatialStreams(1),
       m_rxSpatialStreams(1),
       m_wifiRadioEnergyModel(nullptr),
-      m_timeLastPreambleDetected(Seconds(0))
+      m_timeLastPreambleDetected()
 {
     NS_LOG_FUNCTION(this);
     m_random = CreateObject<UniformRandomVariable>();
@@ -711,14 +726,14 @@ WifiPhy::SetWifiRadioEnergyModel(const Ptr<WifiRadioEnergyModel> wifiRadioEnergy
 }
 
 dBm_u
-WifiPhy::GetPowerDbm(uint8_t powerLevel) const
+WifiPhy::GetPower(uint8_t powerLevel) const
 {
     NS_ASSERT(m_txPowerBase <= m_txPowerEnd);
     NS_ASSERT(m_nTxPower > 0);
     dBm_u dbm;
     if (m_nTxPower > 1)
     {
-        dbm = m_txPowerBase + powerLevel * (m_txPowerEnd - m_txPowerBase) / (m_nTxPower - 1);
+        dbm = m_txPowerBase + dB_u{powerLevel * (m_txPowerEnd - m_txPowerBase) / (m_nTxPower - 1)};
     }
     else
     {
@@ -849,18 +864,6 @@ WifiPhy::GetPifs() const
     return m_pifs;
 }
 
-Time
-WifiPhy::GetAckTxTime() const
-{
-    return m_ackTxTime;
-}
-
-Time
-WifiPhy::GetBlockAckTxTime() const
-{
-    return m_blockAckTxTime;
-}
-
 void
 WifiPhy::Configure80211a()
 {
@@ -868,12 +871,11 @@ WifiPhy::Configure80211a()
     AddPhyEntity(WIFI_MOD_CLASS_OFDM, Create<OfdmPhy>());
 
     // See Table 17-21 "OFDM PHY characteristics" of 802.11-2016
-    SetSifs(MicroSeconds(16));
-    SetSlot(MicroSeconds(9));
+    SetSifs(OFDM_SIFS_TIME_20MHZ);
+    SetSlot(OFDM_SLOT_TIME_20MHZ);
     SetPifs(GetSifs() + GetSlot());
     // See Table 10-5 "Determination of the EstimatedAckTxTime based on properties
     // of the PPDU causing the EIFS" of 802.11-2016
-    m_ackTxTime = MicroSeconds(44);
 }
 
 void
@@ -884,13 +886,11 @@ WifiPhy::Configure80211b()
     AddPhyEntity(WIFI_MOD_CLASS_HR_DSSS, phyEntity);
     AddPhyEntity(WIFI_MOD_CLASS_DSSS, phyEntity); // when plain DSSS modes are used
 
-    // See Table 16-4 "HR/DSSS PHY characteristics" of 802.11-2016
-    SetSifs(MicroSeconds(10));
-    SetSlot(MicroSeconds(20));
+    SetSifs(DSSS_SIFS_TIME);
+    SetSlot(DSSS_SLOT_TIME);
     SetPifs(GetSifs() + GetSlot());
     // See Table 10-5 "Determination of the EstimatedAckTxTime based on properties
     // of the PPDU causing the EIFS" of 802.11-2016
-    m_ackTxTime = MicroSeconds(304);
 }
 
 void
@@ -910,25 +910,23 @@ void
 WifiPhy::Configure80211p()
 {
     NS_LOG_FUNCTION(this);
-    if (GetChannelWidth() == 10)
+    if (GetChannelWidth() == MHz_u{10})
     {
         AddPhyEntity(WIFI_MOD_CLASS_OFDM, Create<OfdmPhy>(OFDM_PHY_10_MHZ));
 
         // See Table 17-21 "OFDM PHY characteristics" of 802.11-2016
-        SetSifs(MicroSeconds(32));
-        SetSlot(MicroSeconds(13));
+        SetSifs(OFDM_SIFS_TIME_10MHZ);
+        SetSlot(OFDM_SLOT_TIME_10MHZ);
         SetPifs(GetSifs() + GetSlot());
-        m_ackTxTime = MicroSeconds(88);
     }
-    else if (GetChannelWidth() == 5)
+    else if (GetChannelWidth() == MHz_u{5})
     {
         AddPhyEntity(WIFI_MOD_CLASS_OFDM, Create<OfdmPhy>(OFDM_PHY_5_MHZ));
 
         // See Table 17-21 "OFDM PHY characteristics" of 802.11-2016
-        SetSifs(MicroSeconds(64));
-        SetSlot(MicroSeconds(21));
+        SetSifs(OFDM_SIFS_TIME_5MHZ);
+        SetSlot(OFDM_SLOT_TIME_5MHZ);
         SetPifs(GetSifs() + GetSlot());
-        m_ackTxTime = MicroSeconds(176);
     }
     else
     {
@@ -949,10 +947,6 @@ WifiPhy::Configure80211n()
         Configure80211a();
     }
     AddPhyEntity(WIFI_MOD_CLASS_HT, Create<HtPhy>(m_txSpatialStreams));
-
-    // See Table 10-5 "Determination of the EstimatedAckTxTime based on properties
-    // of the PPDU causing the EIFS" of 802.11-2016
-    m_blockAckTxTime = MicroSeconds(68);
 }
 
 void
@@ -1098,7 +1092,7 @@ WifiPhy::GetChannelWidth() const
 uint8_t
 WifiPhy::GetPrimary20Index() const
 {
-    return m_operatingChannel.GetPrimaryChannelIndex(20);
+    return m_operatingChannel.GetPrimaryChannelIndex(MHz_u{20});
 }
 
 void
@@ -1119,7 +1113,7 @@ WifiPhy::GetTxBandwidth(WifiMode mode, MHz_u maxAllowedWidth) const
     auto modulation = mode.GetModulationClass();
     if (modulation == WIFI_MOD_CLASS_DSSS || modulation == WIFI_MOD_CLASS_HR_DSSS)
     {
-        return 22;
+        return MHz_u{22};
     }
 
     return std::min({GetChannelWidth(), GetMaximumChannelWidth(modulation), maxAllowedWidth});
@@ -1135,7 +1129,7 @@ WifiPhy::SetOperatingChannel(const WifiPhyOperatingChannel& channel)
         segments.emplace_back(channel.GetNumber(segmentId),
                               channel.GetWidth(segmentId),
                               channel.GetPhyBand(),
-                              channel.GetPrimaryChannelIndex(20));
+                              channel.GetPrimaryChannelIndex(MHz_u{20}));
     }
     SetOperatingChannel(segments);
 }
@@ -1240,7 +1234,7 @@ WifiPhy::DoChannelSwitch()
         {
             band = GetDefaultPhyBand(m_standard);
         }
-        if (width == 0 && number == 0)
+        if (width == MHz_u{0} && number == 0)
         {
             width = GetDefaultChannelWidth(m_standard, static_cast<WifiPhyBand>(band));
         }
@@ -1273,7 +1267,7 @@ WifiPhy::DoChannelSwitch()
                    std::back_inserter(segments),
                    [this](const auto& channelTuple) {
                        return FrequencyChannelInfo{std::get<0>(channelTuple),
-                                                   0,
+                                                   MHz_u{0},
                                                    std::get<1>(channelTuple),
                                                    m_band};
                    });
@@ -1281,25 +1275,13 @@ WifiPhy::DoChannelSwitch()
     m_operatingChannel.SetPrimary20Index(std::get<3>(m_channelSettings.front()));
 
     // check that the channel width is supported
-    const auto chWidth = GetChannelWidth();
-
-    if (m_device)
+    if (const auto chWidth = GetChannelWidth();
+        (m_maxRadioBw != MHz_u{0}) && (chWidth > m_maxRadioBw))
     {
-        if (auto htConfig = m_device->GetHtConfiguration();
-            htConfig && !htConfig->Get40MHzOperationSupported() && chWidth > 20)
-        {
-            NS_ABORT_MSG("Attempting to set a " << chWidth
-                                                << " MHz channel on"
-                                                   "a station only supporting 20 MHz operation");
-        }
-
-        if (auto vhtConfig = m_device->GetVhtConfiguration();
-            vhtConfig && !vhtConfig->Get160MHzOperationSupported() && chWidth > 80)
-        {
-            NS_ABORT_MSG("Attempting to set a " << chWidth
-                                                << " MHz channel on"
-                                                   "a station supporting up to 80 MHz operation");
-        }
+        // throw an exception instead of using NS_ABORT_MSG for unit testing this code
+        throw std::runtime_error("Attempting to set a " + std::to_string(chWidth) +
+                                 " MHz channel on a station only supporting " +
+                                 std::to_string(m_maxRadioBw) + " MHz operation");
     }
 
     if (changingPhyBand)
@@ -1408,7 +1390,7 @@ WifiPhy::GetBssMembershipSelectorList() const
 }
 
 void
-WifiPhy::SetSleepMode()
+WifiPhy::SetSleepMode(bool forceSleepInRx)
 {
     NS_LOG_FUNCTION(this);
     m_powerRestricted = false;
@@ -1417,15 +1399,24 @@ WifiPhy::SetSleepMode()
     {
     case WifiPhyState::TX:
         NS_LOG_DEBUG("setting sleep mode postponed until end of current transmission");
-        Simulator::Schedule(GetDelayUntilIdle(), &WifiPhy::SetSleepMode, this);
+        Simulator::Schedule(GetDelayUntilIdle(), &WifiPhy::SetSleepMode, this, forceSleepInRx);
         break;
     case WifiPhyState::RX:
-        NS_LOG_DEBUG("setting sleep mode postponed until end of current reception");
-        Simulator::Schedule(GetDelayUntilIdle(), &WifiPhy::SetSleepMode, this);
+        NS_LOG_DEBUG("setting sleep mode"
+                     << (forceSleepInRx ? "" : "postponed until end of current reception"));
+        if (forceSleepInRx)
+        {
+            AbortCurrentReception(WifiPhyRxfailureReason::SLEEPING);
+            m_state->SwitchToSleep();
+        }
+        else
+        {
+            Simulator::Schedule(GetDelayUntilIdle(), &WifiPhy::SetSleepMode, this, forceSleepInRx);
+        }
         break;
     case WifiPhyState::SWITCHING:
         NS_LOG_DEBUG("setting sleep mode postponed until end of channel switching");
-        Simulator::Schedule(GetDelayUntilIdle(), &WifiPhy::SetSleepMode, this);
+        Simulator::Schedule(GetDelayUntilIdle(), &WifiPhy::SetSleepMode, this, forceSleepInRx);
         break;
     case WifiPhyState::CCA_BUSY:
     case WifiPhyState::IDLE:
@@ -1574,6 +1565,7 @@ WifiPhy::CalculateTxDuration(uint32_t size,
                              WifiPhyBand band,
                              uint16_t staId)
 {
+    NS_ASSERT(txVector.IsValid(band));
     Time duration = CalculatePhyPreambleAndHeaderDuration(txVector) +
                     GetPayloadDuration(size, txVector, band, NORMAL_MPDU, staId);
     NS_ASSERT(duration.IsStrictlyPositive());
@@ -1593,6 +1585,7 @@ WifiPhy::CalculateTxDuration(const WifiConstPsduMap& psduMap,
                              const WifiTxVector& txVector,
                              WifiPhyBand band)
 {
+    NS_ASSERT(txVector.IsValid(band));
     return GetStaticPhyEntity(txVector.GetModulationClass())
         ->CalculateTxDuration(psduMap, txVector, band);
 }
@@ -1691,9 +1684,9 @@ WifiPhy::NotifyRxPpduDrop(Ptr<const WifiPpdu> ppdu, WifiPhyRxfailureReason reaso
 void
 WifiPhy::NotifyMonitorSniffRx(Ptr<const WifiPsdu> psdu,
                               MHz_u channelFreq,
-                              WifiTxVector txVector,
+                              const WifiTxVector& txVector,
                               SignalNoiseDbm signalNoise,
-                              std::vector<bool> statusPerMpdu,
+                              const std::vector<bool>& statusPerMpdu,
                               uint16_t staId)
 {
     MpduInfo aMpdu;
@@ -1745,7 +1738,7 @@ WifiPhy::NotifyMonitorSniffRx(Ptr<const WifiPsdu> psdu,
 void
 WifiPhy::NotifyMonitorSniffTx(Ptr<const WifiPsdu> psdu,
                               MHz_u channelFreq,
-                              WifiTxVector txVector,
+                              const WifiTxVector& txVector,
                               uint16_t staId)
 {
     MpduInfo aMpdu;
@@ -1780,6 +1773,32 @@ WifiPhy::NotifyMonitorSniffTx(Ptr<const WifiPsdu> psdu,
             m_phyMonitorSniffTxTrace(psdu->GetPacket(), channelFreq, txVector, aMpdu, staId);
         }
     }
+}
+
+std::optional<Time>
+WifiPhy::GetTimeToPreambleDetectionEnd() const
+{
+    for (const auto& [modClass, phyEntity] : m_phyEntities)
+    {
+        if (auto remTime = phyEntity->GetTimeToPreambleDetectionEnd())
+        {
+            return remTime;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<Time>
+WifiPhy::GetTimeToMacHdrEnd(uint16_t staId) const
+{
+    for (auto& [modClass, phyEntity] : m_phyEntities)
+    {
+        if (auto remTime = phyEntity->GetTimeToMacHdrEnd(staId))
+        {
+            return remTime;
+        }
+    }
+    return std::nullopt;
 }
 
 WifiConstPsduMap
@@ -1848,20 +1867,15 @@ WifiPhy::Send(const WifiConstPsduMap& psdus, const WifiTxVector& txVector)
 
     const auto txDuration = CalculateTxDuration(psdus, txVector, GetPhyBand());
 
-    auto noEndPreambleDetectionEvent = true;
-    for (const auto& [mc, entity] : m_phyEntities)
-    {
-        noEndPreambleDetectionEvent =
-            noEndPreambleDetectionEvent && entity->NoEndPreambleDetectionEvents();
-    }
-    if (!noEndPreambleDetectionEvent && !m_currentEvent)
+    if (const auto timeToPreambleDetectionEnd = GetTimeToPreambleDetectionEnd();
+        timeToPreambleDetectionEnd && !m_currentEvent)
     {
         // PHY is in the initial few microseconds during which the
         // start of RX has occurred but the preamble detection period
         // has not elapsed
         AbortCurrentReception(SIGNAL_DETECTION_ABORTED_BY_TX);
     }
-    else if (!noEndPreambleDetectionEvent || m_currentEvent)
+    else if (timeToPreambleDetectionEnd || m_currentEvent)
     {
         AbortCurrentReception(RECEPTION_ABORTED_BY_TX);
     }
@@ -1894,7 +1908,7 @@ WifiPhy::Send(const WifiConstPsduMap& psdus, const WifiTxVector& txVector)
     {
         NotifyMonitorSniffTx(psdu.second, GetFrequency(), txVector, psdu.first);
     }
-    m_state->SwitchToTx(txDuration, psdus, GetPowerDbm(txVector.GetTxPowerLevel()), txVector);
+    m_state->SwitchToTx(txDuration, psdus, GetPower(txVector.GetTxPowerLevel()), txVector);
 
     if (m_wifiRadioEnergyModel &&
         m_wifiRadioEnergyModel->GetMaximumTimeInState(WifiPhyState::TX) < txDuration)
@@ -1940,13 +1954,7 @@ WifiPhy::Reset()
 {
     NS_LOG_FUNCTION(this);
     m_currentPreambleEvents.clear();
-    bool noEndPreambleDetectionEvent = true;
-    for (const auto& [mc, entity] : m_phyEntities)
-    {
-        noEndPreambleDetectionEvent =
-            noEndPreambleDetectionEvent && entity->NoEndPreambleDetectionEvents();
-    }
-    if (m_interference && (m_currentEvent || !noEndPreambleDetectionEvent))
+    if (m_interference && (m_currentEvent || GetTimeToPreambleDetectionEnd()))
     {
         m_interference->NotifyRxEnd(Simulator::Now(), GetCurrentFrequencyRange());
     }
@@ -1982,10 +1990,15 @@ WifiPhy::StartReceivePreamble(Ptr<const WifiPpdu> ppdu,
     }
 }
 
-bool
-WifiPhy::IsReceivingPhyHeader() const
+std::optional<std::reference_wrapper<const WifiTxVector>>
+WifiPhy::GetInfoIfRxingPhyHeader() const
 {
-    return m_endPhyRxEvent.IsPending();
+    if (m_endPhyRxEvent.IsPending())
+    {
+        NS_ASSERT_MSG(m_currentEvent, "No current event while receiving PHY header");
+        return std::cref(m_currentEvent->GetPpdu()->GetTxVector());
+    }
+    return std::nullopt;
 }
 
 void
@@ -2292,17 +2305,17 @@ WifiPhy::GetTxPowerForTransmission(Ptr<const WifiPpdu> ppdu) const
     dBm_u txPower;
     if (!m_powerRestricted)
     {
-        txPower = GetPowerDbm(txVector.GetTxPowerLevel());
+        txPower = GetPower(txVector.GetTxPowerLevel());
     }
     else
     {
         if (txVector.GetNssMax() > 1 || txVector.GetNssTotal() > 1)
         {
-            txPower = std::min(m_txPowerMaxMimo, GetPowerDbm(txVector.GetTxPowerLevel()));
+            txPower = std::min(m_txPowerMaxMimo, GetPower(txVector.GetTxPowerLevel()));
         }
         else
         {
-            txPower = std::min(m_txPowerMaxSiso, GetPowerDbm(txVector.GetTxPowerLevel()));
+            txPower = std::min(m_txPowerMaxSiso, GetPower(txVector.GetTxPowerLevel()));
         }
     }
 
@@ -2353,7 +2366,7 @@ WifiPhy::GetPrimaryChannelNumber(MHz_u primaryChannelWidth) const
 Hz_u
 WifiPhy::GetSubcarrierSpacing() const
 {
-    Hz_u subcarrierSpacing = 0;
+    Hz_u subcarrierSpacing{0};
     switch (GetStandard())
     {
     case WIFI_STANDARD_80211a:
@@ -2361,21 +2374,21 @@ WifiPhy::GetSubcarrierSpacing() const
     case WIFI_STANDARD_80211b:
     case WIFI_STANDARD_80211n:
     case WIFI_STANDARD_80211ac:
-        subcarrierSpacing = 312500;
+        subcarrierSpacing = SUBCARRIER_FREQUENCY_SPACING;
         break;
     case WIFI_STANDARD_80211p:
-        if (GetChannelWidth() == 5)
+        if (GetChannelWidth() == MHz_u{5})
         {
-            subcarrierSpacing = 78125;
+            subcarrierSpacing = SUBCARRIER_FREQUENCY_SPACING / 4;
         }
         else
         {
-            subcarrierSpacing = 156250;
+            subcarrierSpacing = SUBCARRIER_FREQUENCY_SPACING / 2;
         }
         break;
     case WIFI_STANDARD_80211ax:
     case WIFI_STANDARD_80211be:
-        subcarrierSpacing = 78125;
+        subcarrierSpacing = SUBCARRIER_FREQUENCY_SPACING_HE;
         break;
     default:
         NS_FATAL_ERROR("Standard unknown: " << GetStandard());
